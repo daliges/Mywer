@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
+from dotenv import load_dotenv
 import requests
 import re
 import os
+
+load_dotenv()
 
 router = APIRouter()
 
@@ -15,6 +18,9 @@ def get_spotify_token():
     url = "https://accounts.spotify.com/api/token"
     client_id = os.getenv("SPOTIFY_CLIENT_ID")
     client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+    if not client_id or not client_secret:
+        return None  # Ensure environment variables are loaded
 
     data = {
         "grant_type": "client_credentials",

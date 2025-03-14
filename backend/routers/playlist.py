@@ -1,9 +1,16 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Request, Query
 from backend.routers import spotify  # Import Spotify router
+from pydantic import BaseModel, HttpUrl
 import re
 
 router = APIRouter()
 
+class PlaylistSchema(BaseModel):
+    url: HttpUrl
+    name_song: str
+    artist: str
+    album: str | None
+    
 def detect_service(url: str):
     if "spotify.com" in url:
         return "spotify"
@@ -20,3 +27,7 @@ async def get_playlist(playlist_url: str = Query(..., description="Playlist URL"
         return await spotify.get_spotify_playlist(playlist_url)
     
     raise HTTPException(status_code=400, detail="Service not implemented yet")
+
+@router.post("/post-playlist/")
+async def post_playlist(playlist: PlaylistSchema):
+    return playlist
