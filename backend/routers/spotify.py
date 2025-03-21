@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from backend.routers import pydantic_models
 from dotenv import load_dotenv
 import requests
 import re
@@ -9,6 +10,30 @@ load_dotenv()
 router = APIRouter()
 
 SPOTIFY_API_URL = "https://api.spotify.com/v1"
+
+# Function to transform API response
+def transform_spotify_response(data: dict) -> dict:
+    # if "tracks" not in data:
+    #     raise HTTPException(status_code=500, detail="Invalid playlist data format")
+    
+    playlist_name = data.get("name", "Unknown Playlist")
+    tracks = []
+
+    for item in data["tracks"]["items"]:
+        track_info = item.get("track", {})
+        
+        # Extracting required fields
+        song_name = track_info.get("name", "Unknown Song")
+        album_name = track_info.get("album", {}).get("name", "Unknown Album")
+        artists = [artist["name"] for artist in track_info.get("artists", [])]
+
+        tracks.append({
+            "name": song_name,
+            "album": album_name,
+            "artists": artists
+        })
+
+    return {"name": playlist_name, "tracks": tracks}
 
 def extract_playlist_id(url: str):
     match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
@@ -51,4 +76,5 @@ async def get_spotify_playlist(playlist_url: str):
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail="Failed to fetch playlist")
 
-    return response.json()
+    transformed_data = transform_spotify_response(response.json())
+    return pydantic_models.Playlist(**transformed_data)
