@@ -13,9 +13,6 @@ SPOTIFY_API_URL = "https://api.spotify.com/v1"
 
 # Function to transform API response
 def transform_spotify_response(data: dict) -> dict:
-    # if "tracks" not in data:
-    #     raise HTTPException(status_code=500, detail="Invalid playlist data format")
-    
     playlist_name = data.get("name", "Unknown Playlist")
     tracks = []
 
@@ -25,15 +22,17 @@ def transform_spotify_response(data: dict) -> dict:
         # Extracting required fields
         song_name = track_info.get("name", "Unknown Song")
         album_name = track_info.get("album", {}).get("name", "Unknown Album")
-        artists = [artist["name"] for artist in track_info.get("artists", [])]
+        artists = [{"name": artist["name"]} for artist in track_info.get("artists", [])]
 
         tracks.append({
-            "name": song_name,
-            "album": album_name,
-            "artists": artists
+            "track": {
+                "name": song_name,
+                "album": {"name": album_name},
+                "artists": artists
+            }
         })
 
-    return {"name": playlist_name, "tracks": tracks}
+    return {"id": data["external_urls"]["spotify"], "tracks": {"items": tracks}}
 
 def extract_playlist_id(url: str):
     match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
@@ -62,6 +61,7 @@ def get_spotify_token():
     return None
 
 async def get_spotify_playlist(playlist_url: str):
+
     playlist_id = extract_playlist_id(playlist_url)
     if not playlist_id:
         raise HTTPException(status_code=400, detail="Invalid URL")

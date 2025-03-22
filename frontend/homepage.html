@@ -39,6 +39,20 @@
         }
         #result {
             margin-top: 20px;
+            max-height: 400px; /* Limit the height of the result container */
+            overflow-y: auto; /* Add vertical scroll if content exceeds height */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
         }
     </style>
 </head>
@@ -47,19 +61,74 @@
         <h2>Enter Playlist URL</h2>
         <input type="text" id="searchInput" placeholder="Paste playlist URL...">
         <button onclick="searchPlaylist()">Search</button>
-        <p id="result"></p>
+        <div id="result"></div> <!-- Use a div to display the table -->
     </div>
 
     <script>
         function searchPlaylist() {
             let query = document.getElementById("searchInput").value;
+            console.log("Searching for playlist:", query);
             
-            fetch(`http://127.0.0.1:8008/get-playlist/?playlist_url=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+            fetch(`http://127.0.0.1:8000/get-playlist/?playlist_url=${encodeURIComponent(query)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok " + response.statusText);
+                }
+                return response.json();
             })
-            .catch(error => console.error("Error:", error));
+            .then(data => {
+                console.log("Received data:", data);
+                displayTable(data);
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                document.getElementById("result").innerText = "Error: " + error.message;
+            });
+        }
+
+        function displayTable(data) {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = ''; // Clear previous results
+
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const tbody = document.createElement("tbody");
+
+            // Create table headers
+            const headers = ["Track Name", "Album Name", "Artists"];
+            const tr = document.createElement("tr");
+            headers.forEach(header => {
+                const th = document.createElement("th");
+                th.innerText = header;
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+
+            // Create table rows
+            data.tracks.items.forEach(item => {
+                const tr = document.createElement("tr");
+                const trackName = item.track.name;
+                const albumName = item.track.album.name;
+                const artists = item.track.artists.map(artist => artist.name).join(", ");
+
+                const tdTrackName = document.createElement("td");
+                tdTrackName.innerText = trackName;
+                tr.appendChild(tdTrackName);
+
+                const tdAlbumName = document.createElement("td");
+                tdAlbumName.innerText = albumName;
+                tr.appendChild(tdAlbumName);
+
+                const tdArtists = document.createElement("td");
+                tdArtists.innerText = artists;
+                tr.appendChild(tdArtists);
+
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            resultDiv.appendChild(table);
         }
     </script>
 </body>
