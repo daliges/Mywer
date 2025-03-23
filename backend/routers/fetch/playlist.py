@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request, Query
-from backend.routers import spotify, pydantic_models  # Import Spotify router
+from fastapi import APIRouter, HTTPException, Query
+from backend.routers import pydantic_models  # Import Spotify router
 import logging
+
+from backend.routers.fetch import spotify
 
 router = APIRouter()
 
@@ -10,7 +12,7 @@ logger = logging.getLogger(__name__)
     
 def detect_service(url: str):
     url_str = str(url)
-    
+
     if "spotify.com" in url_str:
         return "spotify"
     else:

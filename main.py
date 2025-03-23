@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from backend.routers import main_router, limiter
+from backend.middleware import limiter
+from backend.routers import main_router
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +17,7 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 app.include_router(main_router)
 # app.include_router(limiter.router)
 
-app.state.limiter = limiter
+# backend.middleware.limiter = limiter
 
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

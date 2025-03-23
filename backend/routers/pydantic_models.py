@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl
-from typing import List, Dict
+from typing import List
 
 class Artist(BaseModel):
     name: str

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
-from backend.routers import spotify as spotify_router, playlist as playlist_router, limiter as limiter_router
+from backend.routers.fetch import playlist as playlist_router
+from backend.routers.fetch import spotify as spotify_router
 
 # structuring all API's in one place
 
