@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query
-from backend.routers import pydantic_models  # Import Spotify router
+from fastapi import APIRouter, HTTPException, Query, Body
+from backend.routers.pydantic_models import Playlist  # Import Spotify router
+from backend.routers.check import find
 import logging
 
 from backend.routers.fetch import spotify
 
 router = APIRouter()
+
+result = None # globall declaration for finding songs and not to call the get_playlist again
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,24 +21,32 @@ def detect_service(url: str):
     else:
         return None
 
-@router.get("/get-playlist/", response_model=pydantic_models.Playlist)
+@router.get("/get-playlist/", response_model=Playlist)
 async def get_playlist(playlist_url: str = Query(..., description="Playlist URL")):
     logger.info(f"Received playlist URL: {playlist_url}")
-    response = None
-    data = None
+    return await fetch_playlist_by_url(playlist_url)
+
+@router.post("/get-playlist/")
+async def post_playlist(playlist: Playlist):
+    logger.info(f"Received playlist ID: {playlist.id}")
+    return await fetch_playlist_by_url(str(playlist.id))  # Use the same helper
+
+
+# 💡 Shared internal function
+async def fetch_playlist_by_url(playlist_url: str) -> Playlist:
     service = detect_service(playlist_url)
 
     if not service:
         raise HTTPException(status_code=400, detail="Unsupported playlist service")
 
     if service == "spotify":
-        return await spotify.get_spotify_playlist(playlist_url)
-    
+        result = await spotify.get_spotify_playlist(playlist_url)
+        return result
+
     raise HTTPException(status_code=400, detail="Service not implemented yet")
 
-@router.post("/get-playlist/")
-async def post_playlist(playlist: pydantic_models.Playlist):
+@router.post("/find-tracks/")
+async def find_tracks(playlist: Playlist = Body(...)):
     logger.info(f"Received playlist ID: {playlist.id}")
-    playlist_data = await get_playlist(str(playlist.id))
-
-    return playlist_data
+    return await find.find_songs(playlist)
+    

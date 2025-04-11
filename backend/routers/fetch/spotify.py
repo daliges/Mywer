@@ -77,4 +77,6 @@ async def get_spotify_playlist(playlist_url: str):
         raise HTTPException(status_code=response.status_code, detail="Failed to fetch playlist")
 
     transformed_data = transform_spotify_response(response.json())
-    return pydantic_models.Playlist(**transformed_data)
+
+    transformed_data.pop("id", None)  # Removes Spotify's 'id' if it exists
+    return pydantic_models.Playlist(id=playlist_url, **transformed_data)
