@@ -5,6 +5,7 @@ const FindSongs = () => {
   const [trackData, setTrackData] = useState([]);
   const [selectedTracks, setSelectedTracks] = useState([]);
   const [foundTracks, setFoundTracks] = useState([]);
+  const [downloadSelections, setDownloadSelections] = useState([]);
 
   const searchPlaylist = () => {
     fetch(`http://127.0.0.1:8000/get-playlist/?playlist_url=${encodeURIComponent(query)}`)
@@ -13,6 +14,7 @@ const FindSongs = () => {
         setTrackData(data.tracks.items);
         setSelectedTracks([]);
         setFoundTracks([]);
+        setDownloadSelections([]);
       })
       .catch(error => {
         console.error("Error:", error);
@@ -62,12 +64,42 @@ const FindSongs = () => {
       .then(data => {
         const count = Array.isArray(data) ? data.length : 0;
         setFoundTracks(data);
+        setDownloadSelections([]);
         alert("Found " + count + " matches.");
       })
       .catch(error => {
         console.error("Find error:", error);
         alert("Error finding tracks.");
       });
+  };
+
+  const handleDownloadCheckboxChange = (index) => {
+    setDownloadSelections(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
+
+  const handleDownloadSelected = () => {
+    if (downloadSelections.length === 0) {
+      alert("No tracks selected for download.");
+      return;
+    }
+
+    downloadSelections.forEach(index => {
+      const track = foundTracks[index]?.found_on_jamendo;
+      if (track?.audio) {
+        const link = document.createElement("a");
+        link.href = track.audio;
+        link.download = `${track.name}.mp3`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    });
   };
 
   return (
@@ -120,6 +152,7 @@ const FindSongs = () => {
           <table>
             <thead>
               <tr>
+                <th>Select</th>
                 <th>Song</th>
                 <th>Artist</th>
                 <th>Jamendo Link</th>
@@ -129,6 +162,13 @@ const FindSongs = () => {
               {foundTracks.map((item, index) =>
                 item.found_on_jamendo ? (
                   <tr key={index}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={downloadSelections.includes(index)}
+                        onChange={() => handleDownloadCheckboxChange(index)}
+                      />
+                    </td>
                     <td>{item.song}</td>
                     <td>{item.artists.join(", ")}</td>
                     <td>
@@ -145,6 +185,7 @@ const FindSongs = () => {
               )}
             </tbody>
           </table>
+          <button onClick={handleDownloadSelected}>Download Selected</button>
         </div>
       )}
     </div>
