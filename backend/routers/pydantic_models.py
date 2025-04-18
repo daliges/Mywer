@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl
-from typing import List
+from typing import List, Optional
 
 class Artist(BaseModel):
     name: str
@@ -29,3 +29,9 @@ class HttpsUrl(HttpUrl):
 class Playlist(BaseModel):
     id: HttpsUrl
     tracks: Tracks
+
+class FoundTrack(BaseModel):
+    name: str
+    artists: List[str]
+    audio: Optional[HttpUrl] = None
+    audiodownload: Optional[HttpUrl] = None
