@@ -82,38 +82,40 @@ const FindSongs = () => {
     );
   };
 
+  // inside FindSongs component
   const handleDownloadSelected = () => {
     if (downloadSelections.length === 0) {
       alert("No tracks selected for download.");
       return;
     }
-
-    downloadSelections.forEach((idx) => {
-      const jam = foundTracks[idx]?.found_on_jamendo;
-      if (jam?.audio) {
-        // ← fetch the remote file as a blob, then download
-        fetch(jam.audio)
-          .then((res) => {
-            if (!res.ok) throw new Error("Network response was not ok");
-            return res.blob();
-          })
-          .then((blob) => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${jam.name}.mp3`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-          })
-          .catch((err) => {
-            console.error("Download failed:", err);
-            alert(`Failed to download ${jam.name}`);
-          });
-      }
-    });
+  
+    // grab the FoundTrack objects you got back from /find-tracks/
+    const selectedItems = downloadSelections.map(i => foundTracks[i]);
+  
+    fetch("http://127.0.0.1:8000/download-tracks/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(selectedItems)
+    })
+    .then(res => res.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "selected_tracks.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    })
+      .catch(error => {
+        console.error(error);
+        alert(error.message);
+      });
   };
+  
 
   return (
     <div className="search-container">

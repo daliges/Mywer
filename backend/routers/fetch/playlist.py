@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query, Body
 from backend.routers.pydantic_models import Playlist, FoundTrack  # Import Spotify router
 from backend.routers.check import find
-from backend.routers import download
+from backend.routers.download.download_tracks import download_tracks 
+from fastapi.responses import StreamingResponse, FileResponse
 from typing import List
 import logging
 
@@ -52,6 +53,21 @@ async def find_tracks(playlist: Playlist = Body(...)):
     logger.info(f"Received playlist ID: {playlist.id}")
     return await find.find_songs(playlist)
     
-@router.post("/download-tracks/")
-async def download_tracks(tracks: List[FoundTrack] = Body(...)):
-    return await download.download_tracks(tracks)
+@router.post(
+    "/download-tracks/",
+    response_model=None,
+    response_class=None,
+    # tell OpenAPI this returns a ZIP, not JSON
+    responses={
+        200: {
+            "content": {
+                "application/zip": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+            "description": "A zip file containing all selected tracks"
+        }
+    },
+)
+async def download_tracks_endpoint(tracks: List[FoundTrack] = Body(...)):
+    return await download_tracks(tracks)
