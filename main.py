@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # Serve static files (HTML, CSS, JS)
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 # Include routers
 app.include_router(main_router)
