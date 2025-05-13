@@ -92,15 +92,29 @@ const FindSongs = () => {
     // grab the FoundTrack objects you got back from /find-tracks/
     const selectedItems = downloadSelections.map(i => foundTracks[i]);
   
-    fetch("http://127.0.0.1:8000/download-tracks/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(selectedItems)
-    })
-    .then(res => res.blob())
-    .then(blob => {
+    const payload = selectedItems.map((item) => ({
+        name:  item.song,                         // required
+        artists: item.artists,                    // required (list[str])
+        audio: item.found_on_jamendo?.audio || null,          // optional
+        audiodownload: item.found_on_jamendo?.audiodownload || null, // optional
+        }));
+      
+        fetch("http://127.0.0.1:8000/download-tracks/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),          // <- send the mapped array
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              // server sent an error (e.g. 400 “No valid tracks”)
+              const msg = await res.text();          // JSON or plain text
+              throw new Error(
+                `Download failed (${res.status}): ${msg || res.statusText}`
+              );
+            }
+            return res.blob();                        // success → get ZIP bytes
+          })
+          .then((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -110,10 +124,10 @@ const FindSongs = () => {
       a.remove();
       URL.revokeObjectURL(url);
     })
-      .catch(error => {
-        console.error(error);
-        alert(error.message);
-      });
+    .catch((error) => {
+            console.error(error);
+            alert(error.message);                     // show the real reason
+          });
   };
   
 

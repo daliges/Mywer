@@ -1,55 +1,57 @@
+import aiohttp, asyncio, io, logging, re, zipfile
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
-from backend.routers.pydantic_models import Playlist
-import io
-import tempfile
-import zipfile
-import aiohttp
-import aiofiles
-import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+_illegal = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
+
+def _safe(s: str | None, fallback: str) -> str:
+    """Return a filesystem-safe string, or a fallback."""
+    if not s:
+        return fallback
+    return _illegal.sub("_", str(s)).strip()[:150] or fallback
 
 async def download_tracks(tracks):
-    """
-    Download the selected FoundTrack objects into a single ZIP, streamed back to the client.
-    """
-    logger.info(f"Preparing to download {len(tracks)} selected tracks")
-
-    # In‑memory buffer for our zip
     buf = io.BytesIO()
-    # Open zip in write mode with deflate compression
-    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        async with aiohttp.ClientSession() as session:
+
+    async with aiohttp.ClientSession() as session:
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
             for t in tracks:
-                # build a safe filename
-                filename = f"{t.name} - {', '.join(t.artists)}.mp3".replace("/", "_")
-                url = t.audiodownload or t.audio
-                if not url:
-                    logger.warning(f"No URL for {filename}, skipping")
-                    continue
-
-                # fetch the MP3 bytes
-                async with session.get(str(url)) as resp:
-                    if resp.status != 200:
-                        logger.error(f"Failed {filename}: HTTP {resp.status}")
+                try:
+                    # ---------- choose the URL ----------
+                    download_url = t.audiodownload or t.audio
+                    if not download_url:
+                        logger.warning("Skipping %s – no URL", t.name)
                         continue
-                    data = await resp.read()
-                    # write directly into the ZIP
+
+                    # ---------- fetch ----------
+                    async with session.get(str(download_url), timeout=30) as resp:
+                        if resp.status != 200:
+                            logger.warning("Skipping %s – HTTP %s",
+                                           t.name, resp.status)
+                            continue
+                        data = await resp.read()
+
+                    # ---------- build a safe filename ----------
+                    artist_part = _safe(", ".join(t.artists), "Unknown Artist")
+                    title_part  = _safe(t.name, "Unknown Title")
+                    filename    = f"{artist_part} - {title_part}.mp3"
+
+                    # ---------- write ----------
                     zf.writestr(filename, data)
-                    logger.info(f"Added {filename} to ZIP")
+                    logger.info("Added %s", filename)
 
-    # if nothing downloaded, raise
-    if not zipfile.ZipFile(buf).namelist():
-        raise HTTPException(status_code=400, detail="No valid tracks to download.")
+                except Exception as e:
+                    logger.exception("Error handling track %s: %s", t.name, e)
+                    continue   # move on to next track
 
-    # rewind and stream
+            if not zf.namelist():
+                raise HTTPException(400, "No valid tracks to download")
+
     buf.seek(0)
     return StreamingResponse(
         buf,
         media_type="application/zip",
-        headers={
-            "Content-Disposition": "attachment; filename=selected_tracks.zip"
-        },
+        headers={"Content-Disposition":
+                 'attachment; filename="selected_tracks.zip"'},
     )

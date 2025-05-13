@@ -56,7 +56,7 @@ async def find_tracks(playlist: Playlist = Body(...)):
 @router.post(
     "/download-tracks/",
     response_model=None,
-    response_class=None,
+    response_class=StreamingResponse,
     # tell OpenAPI this returns a ZIP, not JSON
     responses={
         200: {
