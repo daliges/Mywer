@@ -33,10 +33,17 @@ test_found_track = {
     "audiodownload": "https://example.com/audio_download.mp3"
 }
 
+fake_recommendation = {
+    "character": "Loves indie vibes.",
+    "suggestions": ["Song A", "Song B"],
+    "stats": {"unique_artists": 1}
+}
+
 @pytest.fixture
 def patch_async(monkeypatch):
     import backend.routers.fetch.playlist as playlist_router
     import backend.routers.check.find as find_mod
+    import backend.routers.recommend.ai_call as rec_mod
     # No need to patch download_tracks.py directly
 
     async def fake_fetch_playlist_by_url(url):
@@ -49,9 +56,13 @@ def patch_async(monkeypatch):
         buf = io.BytesIO(b"fakezip")
         return StreamingResponse(buf, media_type="application/zip")
 
+    async def fake_analyse(pl):
+        return fake_recommendation
+
     monkeypatch.setattr(playlist_router, "fetch_playlist_by_url", fake_fetch_playlist_by_url)
     monkeypatch.setattr(playlist_router, "download_tracks", fake_download_tracks)  # << THIS IS THE KEY!
     monkeypatch.setattr(find_mod, "find_songs", fake_find_songs)
+    monkeypatch.setattr(rec_mod, "analyse_playlist", fake_analyse)
 
 def test_get_playlist(patch_async):
     # Query param is 'playlist_url'
@@ -115,3 +126,10 @@ def test_download_tracks_external_404(monkeypatch):
     response = client.post("/download-tracks/", json=[bad_track])
     assert response.status_code == 400
     assert "No valid tracks" in response.text
+
+def test_recommend_playlist(patch_async):
+    response = client.post("/recommend/", json=test_playlist)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["character"] == fake_recommendation["character"]
+    assert len(body["suggestions"]) == 2
