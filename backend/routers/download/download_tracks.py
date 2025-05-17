@@ -12,6 +12,11 @@ def _safe(s: str | None, fallback: str) -> str:
     return _illegal.sub("_", str(s)).strip()[:150] or fallback
 
 async def download_tracks(tracks):
+
+    # Pre-check: Are there any tracks with at least one valid URL?
+    if not any(t.audio or t.audiodownload for t in tracks):
+        raise HTTPException(400, "No valid tracks to download")
+    
     buf = io.BytesIO()
 
     async with aiohttp.ClientSession() as session:

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Body
-from backend.routers.pydantic_models import Playlist, FoundTrack  # Import Spotify router
+from backend.routers.pydantic_models import Playlist, FoundTrack, HttpsUrl  # Import Spotify router
 from backend.routers.check import find
 from backend.routers.download.download_tracks import download_tracks 
 from fastapi.responses import StreamingResponse, FileResponse
@@ -25,9 +25,9 @@ def detect_service(url: str):
         return None
 
 @router.get("/get-playlist/", response_model=Playlist)
-async def get_playlist(playlist_url: str = Query(..., description="Playlist URL")):
+async def get_playlist(playlist_url: HttpsUrl = Query(..., description="Playlist URL")):
     logger.info(f"Received playlist URL: {playlist_url}")
-    return await fetch_playlist_by_url(playlist_url)
+    return await fetch_playlist_by_url(str(playlist_url))
 
 @router.post("/get-playlist/")
 async def post_playlist(playlist: Playlist):
