@@ -22,6 +22,7 @@ static/
 # VSCode and system files
 .vscode/
 .DS_Store
+=0.4.0
 
 # Git backup
 *.orig

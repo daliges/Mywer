@@ -1,3 +1,3 @@
-from .ai_call import analyse_playlist, RecommendationResponse
+from .ai_call import analyse_with_gemini, RecommendationResponse
 
-__all__ = ["analyse_playlist", "RecommendationResponse"]
+__all__ = ["analyse_with_gemini", "RecommendationResponse"]
