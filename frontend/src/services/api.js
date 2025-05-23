@@ -11,3 +11,13 @@ export async function fetchPlaylist(playlistUrl) {
     });
     return await res.json();
   }
+
+  export async function getRecommendations(playlistObj) {
+    const resp = await fetch('http://127.0.0.1:8000/recommend/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(playlistObj)
+    });
+    if (!resp.ok) throw new Error("AI recommend error");
+    return await resp.json();
+  }

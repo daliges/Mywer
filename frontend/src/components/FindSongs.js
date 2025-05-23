@@ -6,6 +6,12 @@ const FindSongs = () => {
   const [selectedTracks, setSelectedTracks] = useState([]);
   const [foundTracks, setFoundTracks] = useState([]);
   const [downloadSelections, setDownloadSelections] = useState([]);
+  const [playlistId, setPlaylistId] = useState("");
+
+  // --- Gemini AI state ---
+  const [aiRec, setAiRec] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   const searchPlaylist = () => {
     fetch(
@@ -16,6 +22,7 @@ const FindSongs = () => {
       .then((response) => response.json())
       .then((data) => {
         setTrackData(data.tracks.items);
+        setPlaylistId(data.id);
         setSelectedTracks([]);
         setFoundTracks([]);
         setDownloadSelections([]);
@@ -130,6 +137,28 @@ const FindSongs = () => {
           });
   };
   
+  // --- Gemini AI Recommendation handler ---
+  async function getRecommendations() {
+    setAiLoading(true); setAiError(""); setAiRec(null);
+    try {
+      // Send the same track data the backend expects (as {tracks: {items: [...]}})
+      const resp = await fetch("http://127.0.0.1:8000/recommend/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: playlistId || "https://open.spotify.com/playlist/unknown", // fallback if not set
+          tracks: { items: trackData }
+        })
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const data = await resp.json();
+      setAiRec(data);
+    } catch (err) {
+      setAiError("Gemini AI request failed: " + err.message);
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   return (
     <div className="search-container">
@@ -175,6 +204,49 @@ const FindSongs = () => {
           </table>
         )}
       </div>
+
+        {/* Gemini Recommendations Button */}
+      {trackData && trackData.length > 0 && (
+        <div style={{ marginBottom: "1em" }}>
+          <button onClick={getRecommendations} disabled={aiLoading}>
+            {aiLoading ? "Getting AI Recommendations..." : "Get AI Recommendations"}
+          </button>
+        </div>
+      )}
+
+      {/* AI Error */}
+      {aiError && <div style={{ color: "red" }}>{aiError}</div>}
+
+      {/* Gemini AI Output */}
+      {aiRec && (
+        <div style={{
+          background: "#f0f7fa",
+          borderRadius: 10,
+          padding: 20,
+          marginTop: 16
+        }}>
+          <h3>🎧 Gemini's Personality Profile</h3>
+          <p>{aiRec.character}</p>
+
+          <h4>🎵 Gemini's Music Recommendations</h4>
+          <ol>
+            {aiRec.suggestions.map((s, i) =>
+              <li key={i}>{typeof s === "string" ? s : JSON.stringify(s)}</li>
+            )}
+          </ol>
+
+          {aiRec.stats && (
+            <div>
+              <h4>📊 Playlist Stats</h4>
+              <ul>
+                {Object.entries(aiRec.stats).map(([k, v]) =>
+                  <li key={k}><b>{k}</b>: {String(v)}</li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {foundTracks.length > 0 && (
         <div className="found-tracks">
