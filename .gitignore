@@ -27,5 +27,6 @@ static/
 # Git backup
 *.orig
 
+# Private files
 .db
 .env
