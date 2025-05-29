@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import TrackItem from './TrackItem';
+import { FiCheck } from 'react-icons/fi';
 
 const Card = styled.div`
   background: transparent;
@@ -25,6 +26,23 @@ const SelectAllRow = styled.div`
   font-size: 1.08rem;
 `;
 
+const GreyCheckbox = styled.div`
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #232323;
+  border: 2px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 8px;
+  ${props => props.checked && `
+    border: 2px solid #888;
+    background: #232323;
+  `}
+`;
+
 export default function TrackList({ tracks, selected, setSelected }) {
   const allChecked = tracks.length > 0 && selected.length === tracks.length;
   const toggleAll = () => {
@@ -39,12 +57,9 @@ export default function TrackList({ tracks, selected, setSelected }) {
   return (
     <Card>
       <SelectAllRow>
-        <input
-          type="checkbox"
-          checked={allChecked}
-          onChange={toggleAll}
-          style={{ width: 20, height: 20, marginRight: 8 }}
-        />
+        <GreyCheckbox checked={allChecked} onClick={toggleAll} tabIndex={0} role="checkbox" aria-checked={allChecked}>
+          {allChecked && <FiCheck color="#b3b3b3" size={18} />}
+        </GreyCheckbox>
         Select all
       </SelectAllRow>
       <List>

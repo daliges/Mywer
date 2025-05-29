@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { FiCheck } from 'react-icons/fi';
 
 const Row = styled.div`
   display: flex;
@@ -43,6 +44,24 @@ const Artist = styled.div`
   text-overflow: ellipsis;
 `;
 
+const CustomCheckbox = styled.div`
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #111;
+  border: 2px solid #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border 0.15s;
+  margin-right: 12px;
+  ${props => props.checked && `
+    border: 2px solid #1db954;
+    background: #111;
+  `}
+`;
+
 export default function TrackItem({ track, checked, onCheck }) {
   // For /find-tracks/ results: use 'song' and 'artists'
   const title = track.song || track.name || 'Unknown Title';
@@ -57,12 +76,9 @@ export default function TrackItem({ track, checked, onCheck }) {
 
   return (
     <Row>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onCheck}
-        style={{ marginRight: 12, width: 20, height: 20 }}
-      />
+      <CustomCheckbox checked={checked} onClick={onCheck} tabIndex={0} role="checkbox" aria-checked={checked}>
+        {checked && <FiCheck color="#1db954" size={18} />}
+      </CustomCheckbox>
       <AlbumArt src={albumArt} alt="cover" />
       <Info>
         <Title>{title}</Title>
