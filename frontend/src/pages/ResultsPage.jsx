@@ -62,13 +62,17 @@ export default function ResultsPage() {
   const [selected, setSelected] = useState([]);
   const [tab, setTab]           = useState('free');
   const [loading, setLoading]   = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    findTracks(playlist).then(r => setTracks(r.data));
-    getRecommendations(playlist).then(r => {
-      setRecs(r.data.suggestions);
-      setProfile(r.data.character);
-    });
+    setInitialLoading(true);
+    Promise.all([
+      findTracks(playlist).then(r => setTracks(r.data)),
+      getRecommendations(playlist).then(r => {
+        setRecs(r.data.suggestions);
+        setProfile(r.data.character);
+      })
+    ]).finally(() => setInitialLoading(false));
   }, [playlist]);
 
   const handleDownload = async () => {
@@ -106,20 +110,36 @@ export default function ResultsPage() {
         <Tab active={tab==='recs'} onClick={()=>setTab('recs')}>AI Recs</Tab>
         <Tab active={tab==='profile'} onClick={()=>setTab('profile')}>Personality</Tab>
       </Tabs>
-      <Content>
+      <Content style={{ position: 'relative' }}>
         {tab === 'free' && (
-          <TrackList
-            tracks={tracks}
-            selected={selected}
-            setSelected={setSelected}
-            loading={loading}
-            Loader={Loader}
-          />
+          <>
+            <TrackList
+              tracks={tracks}
+              selected={selected}
+              setSelected={setSelected}
+              loading={loading || initialLoading}
+              Loader={loading ? Loader : undefined} // Only pass Loader for download, not for initial
+            />
+            {initialLoading && (
+              <div style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0,0,0,0.45)',
+                zIndex: 30
+              }}>
+                <Loader />
+              </div>
+            )}
+          </>
         )}
         {tab === 'recs' && <Recommendations list={recs} />}
         {tab === 'profile' && <Personality text={profile} />}
       </Content>
-      {selected.length > 0 && (
+      {/* Only show DownloadButton if not loading and tracks are loaded */}
+      {selected.length > 0 && !initialLoading && (
         <DownloadButton
           selected={selected.map(idx => tracks[idx])}
           loading={loading}
