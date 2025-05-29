@@ -9,12 +9,30 @@ const Card = styled.div`
   border-radius: 0;
   max-width: 800px;
   margin: 2rem auto 0 auto;
+  position: relative;
 `;
 
 const List = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative;
+  ${({ $loading }) => $loading && `
+    pointer-events: none;
+    filter: blur(1.5px) brightness(0.7);
+    opacity: 0.7;
+    transition: filter 0.2s, opacity 0.2s;
+  `}
+`;
+
+const Overlay = styled.div`
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: rgba(0,0,0,0.45);
 `;
 
 const SelectAllRow = styled.div`
@@ -43,7 +61,7 @@ const GreyCheckbox = styled.div`
   `}
 `;
 
-export default function TrackList({ tracks, selected, setSelected }) {
+export default function TrackList({ tracks, selected, setSelected, loading = false, Loader }) {
   const allChecked = tracks.length > 0 && selected.length === tracks.length;
   const toggleAll = () => {
     if (allChecked) setSelected([]);
@@ -56,22 +74,29 @@ export default function TrackList({ tracks, selected, setSelected }) {
 
   return (
     <Card>
-      <SelectAllRow>
-        <GreyCheckbox checked={allChecked} onClick={toggleAll} tabIndex={0} role="checkbox" aria-checked={allChecked}>
-          {allChecked && <FiCheck color="#b3b3b3" size={18} />}
-        </GreyCheckbox>
-        Select all
-      </SelectAllRow>
-      <List>
-        {tracks.map((track, idx) => (
-          <TrackItem
-            key={track.name || idx}
-            track={track}
-            checked={selected.includes(idx)}
-            onCheck={() => toggleOne(idx)}
-          />
-        ))}
-      </List>
+      <div style={{ position: 'relative' }}>
+        <SelectAllRow>
+          <GreyCheckbox checked={allChecked} onClick={toggleAll} tabIndex={0} role="checkbox" aria-checked={allChecked}>
+            {allChecked && <FiCheck color="#b3b3b3" size={18} />}
+          </GreyCheckbox>
+          Select all
+        </SelectAllRow>
+        <List $loading={loading}>
+          {tracks.map((track, idx) => (
+            <TrackItem
+              key={track.name || idx}
+              track={track}
+              checked={selected.includes(idx)}
+              onCheck={() => toggleOne(idx)}
+            />
+          ))}
+        </List>
+        {loading && Loader && (
+          <Overlay>
+            <Loader />
+          </Overlay>
+        )}
+      </div>
     </Card>
   );
 }

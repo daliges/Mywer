@@ -4,8 +4,8 @@ import { FiChevronLeft } from 'react-icons/fi';
 import TrackList from '../components/TrackList';
 import Recommendations from '../components/Recommendations';
 import Personality from '../components/Personality';
-import DownloadButton from '../components/DownloadButton';
-import { findTracks, getRecommendations } from '../services/api';
+import DownloadButton, { Loader } from '../components/DownloadButton';
+import { findTracks, getRecommendations, downloadTracks } from '../services/api';
 import styled from 'styled-components';
 
 const Tabs = styled.div`
@@ -53,14 +53,15 @@ const BackBtn = styled.button`
 
 export default function ResultsPage() {
   const { state } = useLocation();
-  const navigate = useNavigate();        // define navigate before use
-  const playlist = state.playlist;  // now defined before any hooks
+  const navigate = useNavigate();
+  const playlist = state.playlist;
 
   const [tracks, setTracks]     = useState([]);
   const [recs, setRecs]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [selected, setSelected] = useState([]);
   const [tab, setTab]           = useState('free');
+  const [loading, setLoading]   = useState(false);
 
   useEffect(() => {
     findTracks(playlist).then(r => setTracks(r.data));
@@ -69,6 +70,29 @@ export default function ResultsPage() {
       setProfile(r.data.character);
     });
   }, [playlist]);
+
+  const handleDownload = async () => {
+    setLoading(true);
+    try {
+      const payload = selected.map(idx => {
+        const t = tracks[idx];
+        const jamendo = t.found_on_jamendo || {};
+        return {
+          name: t.song || t.name || 'Unknown Title',
+          artists: t.artists || [],
+          audio: jamendo.audio || jamendo.audio_url || null,
+          audiodownload: jamendo.audiodownload || jamendo.audiodownload_url || null
+        };
+      });
+      const res = await downloadTracks(payload);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'tracks.zip'; a.click();
+      window.URL.revokeObjectURL(url);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -83,13 +107,23 @@ export default function ResultsPage() {
         <Tab active={tab==='profile'} onClick={()=>setTab('profile')}>Personality</Tab>
       </Tabs>
       <Content>
-        {tab === 'free' && <TrackList tracks={tracks} selected={selected} setSelected={setSelected} />}
+        {tab === 'free' && (
+          <TrackList
+            tracks={tracks}
+            selected={selected}
+            setSelected={setSelected}
+            loading={loading}
+            Loader={Loader}
+          />
+        )}
         {tab === 'recs' && <Recommendations list={recs} />}
         {tab === 'profile' && <Personality text={profile} />}
       </Content>
       {selected.length > 0 && (
         <DownloadButton
-          selected={selected.map(idx => tracks[idx])} // Pass track objects, not indices
+          selected={selected.map(idx => tracks[idx])}
+          loading={loading}
+          onDownload={handleDownload}
         />
       )}
     </div>
