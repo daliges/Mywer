@@ -1,6 +1,4 @@
 import axios from 'axios';
-import { config as load_dotenv } from 'dotenv';
-load_dotenv();
 
 const BASE = "http://localhost:8000";
 

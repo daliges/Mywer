@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  @apply bg-background text-foreground;
+}
+
+.spotify-search-button {
+  @apply bg-primary hover:bg-primary-600 transition-all;
+}
+
+.track-card {
+  @apply transition-all duration-200 hover:bg-content2 cursor-pointer;
+}

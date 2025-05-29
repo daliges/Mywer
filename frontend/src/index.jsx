@@ -1,3 +1,4 @@
+import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom'                  // or 'react-dom/client' for React 18
 import { ThemeProvider } from 'styled-components';

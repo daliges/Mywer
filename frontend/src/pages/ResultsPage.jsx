@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from '../components/Layout/Header';
+import { FiChevronLeft } from 'react-icons/fi';
 import TrackList from '../components/TrackList';
 import Recommendations from '../components/Recommendations';
 import Personality from '../components/Personality';
@@ -9,11 +9,22 @@ import { findTracks, getRecommendations } from '../services/api';
 import styled from 'styled-components';
 
 const Tabs = styled.div`
-  display: flex; gap: 1rem; padding: 1rem;
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem 0 1.5rem 0;
+  justify-content: center;
 `;
 const Tab = styled.button`
-  background: none; border: none; color: ${({ active, theme }) => active ? theme.colors.primary : theme.colors.subtext};
-  font-size: 1rem; cursor: pointer;
+  background: none;
+  border: none;
+  color: ${({ active, theme }) => active ? theme.colors.primary : theme.colors.subtext};
+  font-size: 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1.5rem;
+  border-radius: 999px;
+  transition: background 0.2s;
+  background: ${({ active }) => active ? '#18181b' : 'transparent'};
 `;
 const Content = styled.div`
    padding: 2rem;
@@ -21,6 +32,24 @@ const Content = styled.div`
    overflow-y: auto;
    background: ${({ theme }) => theme.colors.background};
  `;
+const TopBar = styled.div`
+  background: #18181b;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  box-shadow: none;
+`;
+const BackBtn = styled.button`
+  background: none;
+  border: none;
+  color: #1db954;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  gap: 0.5rem;
+`;
 
 export default function ResultsPage() {
   const { state } = useLocation();
@@ -43,7 +72,11 @@ export default function ResultsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <Header onHome={() => navigate('/')} />
+      <TopBar>
+        <BackBtn onClick={() => navigate('/')}>
+          <FiChevronLeft size={22} /> Back to homepage
+        </BackBtn>
+      </TopBar>
       <Tabs>
         <Tab active={tab==='free'} onClick={()=>setTab('free')}>Free Matches</Tab>
         <Tab active={tab==='recs'} onClick={()=>setTab('recs')}>AI Recs</Tab>
@@ -54,7 +87,11 @@ export default function ResultsPage() {
         {tab === 'recs' && <Recommendations list={recs} />}
         {tab === 'profile' && <Personality text={profile} />}
       </Content>
-      {selected.length > 0 && <DownloadButton selected={selected} />}
+      {selected.length > 0 && (
+        <DownloadButton
+          selected={selected.map(idx => tracks[idx])} // Pass track objects, not indices
+        />
+      )}
     </div>
   );
 }

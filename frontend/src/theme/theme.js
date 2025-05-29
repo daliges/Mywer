@@ -10,19 +10,17 @@ export const theme = {
     text:       '#009000',   // main text on white
     subtext:    '#808082'    // placeholder & secondary text
   },
-    fonts: {
-      body: "Roboto, sans-serif",
-      heading: "Helvetica Neue, sans-serif"
-    }
-  };
+  fonts: {
+    body: "Roboto, sans-serif",
+    heading: "Helvetica Neue, sans-serif"
+  }
+};
 
-  export const GlobalStyle = createGlobalStyle`
+export const GlobalStyle = createGlobalStyle`
   html, body, #root {
     height: 100%;
     margin: 0;
-    padding: 0;
     background: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text};
   }
 `;
 
