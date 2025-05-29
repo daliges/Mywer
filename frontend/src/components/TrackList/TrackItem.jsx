@@ -49,7 +49,11 @@ export default function TrackItem({ track, checked, onCheck }) {
   const artist = Array.isArray(track.artists)
     ? track.artists.join(', ')
     : (track.artist || 'Unknown Artist');
-  const albumArt = track.albumArt || track.cover || 'https://placehold.co/48x48/222/fff?text=♪';
+  // Prefer albumArt from Spotify, then Jamendo, then fallback
+  const albumArt =
+    track.albumArt ||
+    (track.found_on_jamendo && track.found_on_jamendo.album_image) ||
+    'https://placehold.co/48x48/222/fff?text=♪';
 
   return (
     <Row>

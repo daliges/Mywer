@@ -95,7 +95,7 @@ export default function HomePage() {
             fontSize: '0.92rem',
             marginTop: 2
           }}>
-            © 2024 Musicdw. All rights reserved.
+            © 2025 Musicdw. All rights reserved.
           </div>
         </div>
       </Footer>
