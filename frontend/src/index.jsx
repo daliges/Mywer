@@ -1,11 +1,11 @@
 import './index.css';
 import React from 'react';
-import ReactDOM from 'react-dom'                  // or 'react-dom/client' for React 18
+import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from 'styled-components';
 import { theme, GlobalStyle } from './theme/theme';
 import App from './App';
 
-const root = ReactDOM.createRoot(
+const root = createRoot(
   document.getElementById('root')
 );
 root.render(

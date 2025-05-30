@@ -84,7 +84,7 @@ export default function TrackList({ tracks, selected, setSelected, loading = fal
         <List $loading={loading}>
           {tracks.map((track, idx) => (
             <TrackItem
-              key={track.name || idx}
+              key={track.id || `${track.name}-${idx}` || idx}
               track={track}
               checked={selected.includes(idx)}
               onCheck={() => toggleOne(idx)}
