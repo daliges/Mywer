@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { downloadTracks } from '../../services/api';
+import { FiX } from 'react-icons/fi';
 
 const Btn = styled.button`
   position: fixed; bottom: 1rem; right: 1rem;
@@ -139,10 +140,85 @@ export function Loader() {
   );
 }
 
+const ErrorBox = styled.div`
+  position: fixed;
+  bottom: 4.5rem;
+  right: 1rem;
+  background: #18181b;
+  color: #fff;
+  border: 2px solid #ff5252;
+  border-radius: 12px;
+  padding: 1rem 1.5rem 1rem 1.5rem;
+  z-index: 200;
+  max-width: 340px;
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.18);
+  font-size: 1.05rem;
+  min-width: 240px;
+`;
+
+const CloseBtn = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #ff5252;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+`;
+
 export default function DownloadButton({ selected, loading, onDownload }) {
+  const [error, setError] = useState(null);
+
+  const handleDownload = async () => {
+    setError(null);
+    try {
+      await onDownload(setError);
+    } catch (e) {
+      setError([{ track: "Unknown", reason: "An unexpected error occurred." }]);
+    }
+  };
+
+  // Normalize error to always be an array of {track, reason}
+  let errorList = [];
+  if (error) {
+    if (Array.isArray(error)) {
+      errorList = error.map(e =>
+        typeof e === "object" && e.track && e.reason
+          ? e
+          : { track: typeof e === "string" ? e : "Unknown", reason: "Not found or not copyright free" }
+      );
+    } else if (typeof error === "object" && error.track && error.reason) {
+      errorList = [error];
+    } else if (typeof error === "string") {
+      errorList = [{ track: error, reason: "" }];
+    }
+  }
+
   return (
-    <Btn onClick={onDownload} disabled={loading}>
-      Download {selected.length}
-    </Btn>
+    <>
+      <Btn onClick={handleDownload} disabled={loading}>
+        Download {selected.length}
+      </Btn>
+      {error && (
+        <ErrorBox>
+          <CloseBtn onClick={() => setError(null)} title="Close">
+            <FiX />
+          </CloseBtn>
+          <div style={{ fontWeight: 700, color: "#ff5252", marginBottom: 6 }}>
+            Some tracks could not be downloaded:
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, paddingRight: 18 }}>
+            {errorList.map((t, i) =>
+              <li key={i}>
+                <b>{t.track}</b>
+                {t.reason ? <>: {t.reason}</> : null}
+              </li>
+            )}
+          </ul>
+        </ErrorBox>
+      )}
+    </>
   );
 }

@@ -31,6 +31,9 @@ const Content = styled.div`
    flex: 1;
    overflow-y: auto;
    background: ${({ theme }) => theme.colors.background};
+   position: relative;
+   transition: opacity 0.35s cubic-bezier(.4,0,.2,1);
+   opacity: ${({ $fade }) => ($fade ? 1 : 0)};
  `;
 const TopBar = styled.div`
   background: #18181b;
@@ -63,6 +66,7 @@ export default function ResultsPage() {
   const [tab, setTab]           = useState('free');
   const [loading, setLoading]   = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [fade, setFade] = useState(true);
 
   useEffect(() => {
     setInitialLoading(true);
@@ -75,8 +79,16 @@ export default function ResultsPage() {
     ]).finally(() => setInitialLoading(false));
   }, [playlist]);
 
-  const handleDownload = async () => {
+  // Animate fade-out/fade-in on tab change
+  useEffect(() => {
+    setFade(false);
+    const timeout = setTimeout(() => setFade(true), 30); // short delay for fade-out then fade-in
+    return () => clearTimeout(timeout);
+  }, [tab]);
+
+  const handleDownload = async (setError) => {
     setLoading(true);
+    setError && setError(null);
     try {
       const payload = selected.map(idx => {
         const t = tracks[idx];
@@ -89,10 +101,54 @@ export default function ResultsPage() {
         };
       });
       const res = await downloadTracks(payload);
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement('a');
-      a.href = url; a.download = 'tracks.zip'; a.click();
-      window.URL.revokeObjectURL(url);
+      const contentType = res.headers['content-type'];
+      if (contentType && contentType.startsWith('application/zip')) {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url; a.download = 'tracks.zip'; a.click();
+        window.URL.revokeObjectURL(url);
+
+        // --- Robustly parse not-found header ---
+        let notFoundHeader = res.headers['x-not-found'];
+        if (notFoundHeader) {
+          try {
+            // Remove possible wrapping quotes (from some servers)
+            if (
+              (notFoundHeader.startsWith('"') && notFoundHeader.endsWith('"')) ||
+              (notFoundHeader.startsWith("'") && notFoundHeader.endsWith("'"))
+            ) {
+              notFoundHeader = notFoundHeader.slice(1, -1);
+            }
+            // Unescape any \" to "
+            notFoundHeader = notFoundHeader.replace(/\\"/g, '"');
+            const notFound = JSON.parse(notFoundHeader);
+            if (Array.isArray(notFound) && notFound.length > 0) {
+              setError && setError(notFound);
+            }
+          } catch (e) {
+            // ignore parse error
+          }
+        }
+      } else if (contentType && contentType.includes('application/json')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const json = JSON.parse(reader.result);
+            if (json.not_found && Array.isArray(json.not_found) && json.not_found.length > 0) {
+              setError && setError(json.not_found);
+            } else if (json.detail) {
+              setError && setError([{ track: json.detail, reason: "" }]);
+            } else {
+              setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
+            }
+          } catch {
+            setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
+          }
+        };
+        reader.readAsText(res.data);
+      }
+    } catch (err) {
+      setError && setError([{ track: "Unknown", reason: "Download failed" }]);
     } finally {
       setLoading(false);
     }
@@ -110,7 +166,7 @@ export default function ResultsPage() {
         <Tab active={tab==='recs'} onClick={()=>setTab('recs')}>AI Recs</Tab>
         <Tab active={tab==='profile'} onClick={()=>setTab('profile')}>Personality</Tab>
       </Tabs>
-      <Content style={{ position: 'relative' }}>
+      <Content $fade={fade}>
         {tab === 'free' && (
           <>
             <TrackList
