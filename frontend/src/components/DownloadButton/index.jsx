@@ -168,32 +168,63 @@ const CloseBtn = styled.button`
   padding: 0;
 `;
 
-export default function DownloadButton({ selected, loading, onDownload }) {
+export default function DownloadButton({ selected, loading, onDownload, setDownloadStatus }) {
   const [error, setError] = useState(null);
 
   const handleDownload = async () => {
     setError(null);
     try {
-      await onDownload(setError);
+      // onDownload now returns { errors: [...], statusMap: {...} }
+      const result = await onDownload(setError);
+      // result.statusMap: { [trackIdx]: { status: 'success'|'failed', message: string } }
+      if (setDownloadStatus && result && result.statusMap) {
+        setDownloadStatus(result.statusMap);
+      }
+      // Show error window if there are errors
+      if (result && result.errors && result.errors.length > 0) {
+        setError(result.errors);
+      }
     } catch (e) {
       setError([{ track: "Unknown", reason: "An unexpected error occurred." }]);
     }
   };
 
-  // Normalize error to always be an array of {track, reason}
+  // Always show only one concise reason for each track in the error window
+  function conciseReason(reason) {
+    if (/not found/i.test(reason) || /copyright/i.test(reason)) {
+      return "Not found or not copyright free";
+    }
+    if (/download url/i.test(reason)) {
+      return "No download URL available";
+    }
+    if (/download failed/i.test(reason)) {
+      return "Download failed";
+    }
+    if (!reason) {
+      return "Cannot be downloaded";
+    }
+    return reason;
+  }
+
+  // Normalize error to always be an array of {track, reason}, but only show one concise reason per track
   let errorList = [];
   if (error) {
+    // Use a map to ensure only one concise reason per track
+    const trackMap = new Map();
     if (Array.isArray(error)) {
-      errorList = error.map(e =>
-        typeof e === "object" && e.track && e.reason
-          ? e
-          : { track: typeof e === "string" ? e : "Unknown", reason: "Not found or not copyright free" }
-      );
-    } else if (typeof error === "object" && error.track && error.reason) {
-      errorList = [error];
+      error.forEach(e => {
+        let track = typeof e === "object" && e.track ? e.track : (typeof e === "string" ? e : "Unknown");
+        let reason = typeof e === "object" && e.reason ? e.reason : "";
+        if (!trackMap.has(track)) {
+          trackMap.set(track, conciseReason(reason));
+        }
+      });
+    } else if (typeof error === "object" && error.track) {
+      trackMap.set(error.track, conciseReason(error.reason));
     } else if (typeof error === "string") {
-      errorList = [{ track: error, reason: "" }];
+      trackMap.set(error, "Cannot be downloaded");
     }
+    errorList = Array.from(trackMap.entries()).map(([track, reason]) => ({ track, reason }));
   }
 
   return (

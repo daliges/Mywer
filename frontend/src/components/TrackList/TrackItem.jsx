@@ -62,6 +62,24 @@ const CustomCheckbox = styled.div`
   `}
 `;
 
+const DownloadMsg = styled.div`
+  margin-top: 0.35rem;
+  font-size: 0.97rem;
+  color: ${({ error }) => error ? '#ff5252' : '#1db954'};
+  font-weight: 500;
+  word-break: break-word;
+`;
+
+// Always show one concise reason for each track, regardless of downloadStatus
+function getTrackReason(track) {
+  if (track.found_on_jamendo) {
+      return { msg: "Free to download", error: false };
+  }
+  else {
+    return { msg: "Not copyright free", error: true };
+  }
+}
+
 export default function TrackItem({ track, checked, onCheck }) {
   // For /find-tracks/ results: use 'song' and 'artists'
   const title = track.song || track.name || 'Unknown Title';
@@ -74,6 +92,8 @@ export default function TrackItem({ track, checked, onCheck }) {
     (track.found_on_jamendo && track.found_on_jamendo.album_image) ||
     'https://placehold.co/48x48/222/fff?text=♪';
 
+  const { msg: downloadMsg, error: isError } = getTrackReason(track);
+
   return (
     <Row>
       <CustomCheckbox checked={checked} onClick={onCheck} tabIndex={0} role="checkbox" aria-checked={checked}>
@@ -83,6 +103,7 @@ export default function TrackItem({ track, checked, onCheck }) {
       <Info>
         <Title>{title}</Title>
         <Artist>{artist}</Artist>
+        <DownloadMsg error={isError}>{downloadMsg}</DownloadMsg>
       </Info>
     </Row>
   );

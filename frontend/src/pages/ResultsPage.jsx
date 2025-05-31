@@ -67,6 +67,7 @@ export default function ResultsPage() {
   const [loading, setLoading]   = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fade, setFade] = useState(true);
+  const [downloadStatus, setDownloadStatus] = useState({}); // { [trackIdx]: { status, message } }
 
   useEffect(() => {
     setInitialLoading(true);
@@ -90,6 +91,8 @@ export default function ResultsPage() {
   const handleDownload = async (setError) => {
     setLoading(true);
     setError && setError(null);
+    let statusMap = {};
+    let errors = [];
     try {
       const payload = selected.map(idx => {
         const t = tracks[idx];
@@ -123,12 +126,23 @@ export default function ResultsPage() {
             notFoundHeader = notFoundHeader.replace(/\\"/g, '"');
             const notFound = JSON.parse(notFoundHeader);
             if (Array.isArray(notFound) && notFound.length > 0) {
-              setError && setError(notFound);
+              errors = notFound;
             }
-          } catch (e) {
-            // ignore parse error
-          }
+          } catch (e) {}
         }
+        // Mark all selected as success except those in errors
+        selected.forEach((idx, i) => {
+          const t = tracks[idx];
+          const name = t.song || t.name || 'Unknown Title';
+          const artists = t.artists || [];
+          const trackLabel = `${name} - ${artists.join(', ')}`;
+          const errorObj = errors.find(e => e.track === trackLabel);
+          if (errorObj) {
+            statusMap[idx] = { status: 'failed', message: errorObj.reason || 'Download failed' };
+          } else {
+            statusMap[idx] = { status: 'success', message: 'Downloaded successfully' };
+          }
+        });
       } else if (contentType && contentType.includes('application/json')) {
         const reader = new FileReader();
         reader.onload = () => {
@@ -146,12 +160,21 @@ export default function ResultsPage() {
           }
         };
         reader.readAsText(res.data);
+        // Mark all selected as failed
+        selected.forEach((idx) => {
+          statusMap[idx] = { status: 'failed', message: 'Download failed' };
+        });
       }
     } catch (err) {
-      setError && setError([{ track: "Unknown", reason: "Download failed" }]);
+      // Mark all selected as failed
+      selected.forEach((idx) => {
+        statusMap[idx] = { status: 'failed', message: 'Download failed' };
+      });
+      errors = [{ track: "Unknown", reason: "Download failed" }];
     } finally {
       setLoading(false);
     }
+    return { errors, statusMap };
   };
 
   return (
@@ -174,7 +197,8 @@ export default function ResultsPage() {
               selected={selected}
               setSelected={setSelected}
               loading={loading || initialLoading}
-              Loader={loading ? Loader : undefined} // Only pass Loader for download, not for initial
+              Loader={loading ? Loader : undefined}
+              downloadStatus={downloadStatus}
             />
             {initialLoading && (
               <div style={{
@@ -200,6 +224,7 @@ export default function ResultsPage() {
           selected={selected.map(idx => tracks[idx])}
           loading={loading}
           onDownload={handleDownload}
+          setDownloadStatus={setDownloadStatus}
         />
       )}
     </div>

@@ -61,7 +61,7 @@ const GreyCheckbox = styled.div`
   `}
 `;
 
-export default function TrackList({ tracks, selected, setSelected, loading = false, Loader }) {
+export default function TrackList({ tracks, selected, setSelected, loading = false, Loader, downloadStatus = {} }) {
   const allChecked = tracks.length > 0 && selected.length === tracks.length;
   const toggleAll = () => {
     if (allChecked) setSelected([]);
@@ -88,6 +88,7 @@ export default function TrackList({ tracks, selected, setSelected, loading = fal
               track={track}
               checked={selected.includes(idx)}
               onCheck={() => toggleOne(idx)}
+              downloadStatus={downloadStatus[idx]}
             />
           ))}
         </List>
