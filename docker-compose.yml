@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - matching-recommendation
+      - download
+      - spotify
+    environment:
+      - MATCHING_RECOMMENDATION_URL=http://matching-recommendation:8001
+      - DOWNLOAD_URL=http://download:8002
+      - SPOTIFY_URL=http://spotify:8003
+
+  matching-recommendation:
+    build: ./matching-recommendation
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+
+  download:
+    build: ./download
+    ports:
+      - "8002:8002"
+
+  spotify:
+    build: ./spotify
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env

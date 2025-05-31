@@ -73,6 +73,7 @@ export default function ResultsPage() {
     Promise.all([
       findTracks(playlist).then(r => setTracks(r.data)),
       getRecommendations(playlist).then(r => {
+        console.log("AI recommend response:", r.data); // <-- Add this line
         setRecs(r.data.suggestions);
         setProfile(r.data.character);
       })
@@ -112,7 +113,6 @@ export default function ResultsPage() {
         let notFoundHeader = res.headers['x-not-found'];
         if (notFoundHeader) {
           try {
-            // Remove possible wrapping quotes (from some servers)
             if (
               (notFoundHeader.startsWith('"') && notFoundHeader.endsWith('"')) ||
               (notFoundHeader.startsWith("'") && notFoundHeader.endsWith("'"))
