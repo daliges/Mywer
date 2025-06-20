@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { FiCheck } from 'react-icons/fi';
+import { FiCheck, FiExternalLink } from 'react-icons/fi';
 
 const Row = styled.div`
   display: flex;
@@ -12,12 +12,15 @@ const Row = styled.div`
   gap: 1rem;
 `;
 
-const AlbumArt = styled.img`
+const AlbumArt = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  object-fit: cover;
   background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 `;
 
 const Info = styled.div`
@@ -80,7 +83,7 @@ function getTrackReason(track) {
   }
 }
 
-export default function TrackItem({ track, checked, onCheck }) {
+export default function TrackItem({ track, checked, onCheck, downloadStatus, showSpotifyLink }) {
   // For /find-tracks/ results: use 'song' and 'artists'
   const title = track.song || track.name || 'Unknown Title';
   const artist = Array.isArray(track.artists)
@@ -90,18 +93,45 @@ export default function TrackItem({ track, checked, onCheck }) {
   const albumArt =
     track.albumArt ||
     (track.found_on_jamendo && track.found_on_jamendo.album_image) ||
-    'https://placehold.co/48x48/222/fff?text=♪';
+    null; // null if not found
 
   const { msg: downloadMsg, error: isError } = getTrackReason(track);
+  const spotifyUrl = track.spotify_url;
 
   return (
     <Row>
       <CustomCheckbox checked={checked} onClick={onCheck} tabIndex={0} role="checkbox" aria-checked={checked}>
         {checked && <FiCheck color="#1db954" size={18} />}
       </CustomCheckbox>
-      <AlbumArt src={albumArt} alt="cover" />
+      <AlbumArt>
+        {albumArt ? (
+          <img src={albumArt} alt="cover" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+        ) : (
+          // Melody SVG icon
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#b3b3b3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+            <path d="M13 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+            <path d="M9 17v-13h10v13" />
+            <path d="M9 8h10" />
+          </svg>
+        )}
+      </AlbumArt>
       <Info>
-        <Title>{title}</Title>
+        <Title>
+          {title}
+          {showSpotifyLink && spotifyUrl && (
+            <a
+              href={spotifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ marginLeft: 8, color: "#1db954", verticalAlign: "middle" }}
+              title="Open in Spotify"
+            >
+              <FiExternalLink size={16} />
+            </a>
+          )}
+        </Title>
         <Artist>{artist}</Artist>
         <DownloadMsg error={isError}>{downloadMsg}</DownloadMsg>
       </Info>

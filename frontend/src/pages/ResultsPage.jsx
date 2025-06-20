@@ -63,11 +63,18 @@ export default function ResultsPage() {
   const [recs, setRecs]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [selected, setSelected] = useState([]);
+  // Only two tabs: 'free' and 'profile'
   const [tab, setTab]           = useState('free');
   const [loading, setLoading]   = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fade, setFade] = useState(true);
   const [downloadStatus, setDownloadStatus] = useState({}); // { [trackIdx]: { status, message } }
+
+  // New states for AI tracks
+  const [aiTracks, setAiTracks] = useState([]); // Jamendo matches for AI suggestions
+  const [aiSelected, setAiSelected] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDownloadStatus, setAiDownloadStatus] = useState({});
 
   useEffect(() => {
     setInitialLoading(true);
@@ -177,6 +184,140 @@ export default function ResultsPage() {
     return { errors, statusMap };
   };
 
+  // Fetch Jamendo matches for AI suggestions
+  useEffect(() => {
+    async function fetchAiMatches() {
+      if (!recs || !Array.isArray(recs)) return;
+      setAiLoading(true);
+      // For each suggestion, parse name/artist and build a fake playlist
+      const requests = recs.map(s => {
+        const [name, ...rest] = s.split(' - ');
+        const artist = rest.join(' - ').trim();
+        // Build a minimal playlist object as expected by /find-tracks/
+        return findTracks({
+          id: "https://fake.spotify.com/playlist/ai",
+          tracks: {
+            items: [{
+              track: {
+                name: name?.trim() || '',
+                album: { name: '' },
+                artists: [{ name: artist || '' }],
+                albumArt: null,
+                duration: null,
+                isrc: null
+              }
+            }]
+          }
+        }).then(r => r.data[0]); // Only one track per request
+      });
+      const results = await Promise.all(requests);
+      setAiTracks(results);
+      setAiSelected([]); // Do NOT select all by default
+      setAiLoading(false);
+    }
+    if (tab === 'profile' && recs && recs.length > 0) {
+      fetchAiMatches();
+    }
+    // eslint-disable-next-line
+  }, [tab, recs]);
+
+  // Download handler for AI tab
+  const handleAiDownload = async (setError) => {
+    setAiLoading(true);
+    setError && setError(null);
+    let statusMap = {};
+    let errors = [];
+    try {
+      const payload = aiSelected.map(idx => {
+        const t = aiTracks[idx];
+        const jamendo = t.found_on_jamendo || {};
+        return {
+          name: t.song || t.name || 'Unknown Title',
+          artists: t.artists || [],
+          audio: jamendo.audio || jamendo.audio_url || null,
+          audiodownload: jamendo.audiodownload || jamendo.audiodownload_url || null
+        };
+      });
+      const res = await downloadTracks(payload);
+      const contentType = res.headers['content-type'];
+      if (contentType && contentType.startsWith('application/zip')) {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const a = document.createElement('a');
+        a.href = url; a.download = 'tracks.zip'; a.click();
+        window.URL.revokeObjectURL(url);
+
+        let notFoundHeader = res.headers['x-not-found'];
+        if (notFoundHeader) {
+          try {
+            if (
+              (notFoundHeader.startsWith('"') && notFoundHeader.endsWith('"')) ||
+              (notFoundHeader.startsWith("'") && notFoundHeader.endsWith("'"))
+            ) {
+              notFoundHeader = notFoundHeader.slice(1, -1);
+            }
+            notFoundHeader = notFoundHeader.replace(/\\"/g, '"');
+            const notFound = JSON.parse(notFoundHeader);
+            if (Array.isArray(notFound) && notFound.length > 0) {
+              errors = notFound;
+            }
+          } catch (e) {}
+        }
+        aiSelected.forEach((idx, i) => {
+          const t = aiTracks[idx];
+          const name = t.song || t.name || 'Unknown Title';
+          const artists = t.artists || [];
+          const trackLabel = `${name} - ${artists.join(', ')}`;
+          const errorObj = errors.find(e => e.track === trackLabel);
+          if (errorObj) {
+            statusMap[idx] = { status: 'failed', message: errorObj.reason || 'Download failed' };
+          } else {
+            statusMap[idx] = { status: 'success', message: 'Downloaded successfully' };
+          }
+        });
+      } else if (contentType && contentType.includes('application/json')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const json = JSON.parse(reader.result);
+            if (json.not_found && Array.isArray(json.not_found) && json.not_found.length > 0) {
+              setError && setError(json.not_found);
+            } else if (json.detail) {
+              setError && setError([{ track: json.detail, reason: "" }]);
+            } else {
+              setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
+            }
+          } catch {
+            setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
+          }
+        };
+        reader.readAsText(res.data);
+        aiSelected.forEach((idx) => {
+          statusMap[idx] = { status: 'failed', message: 'Download failed' };
+        });
+      }
+    } catch (err) {
+      aiSelected.forEach((idx) => {
+        statusMap[idx] = { status: 'failed', message: 'Download failed' };
+      });
+      errors = [{ track: "Unknown", reason: "Download failed" }];
+    } finally {
+      setAiLoading(false);
+    }
+    return { errors, statusMap };
+  };
+
+  // Helper to get Spotify link for AI suggestion (if exists in original playlist)
+  function getSpotifyUrlForAiTrack(aiTrack) {
+    const aiName = (aiTrack.song || aiTrack.name || '').toLowerCase().trim();
+    const aiArtist = (Array.isArray(aiTrack.artists) ? aiTrack.artists[0] : aiTrack.artists || '').toLowerCase().trim();
+    const match = tracks.find(t => {
+      const tName = (t.song || t.name || '').toLowerCase().trim();
+      const tArtists = Array.isArray(t.artists) ? t.artists.map(a => a.toLowerCase().trim()) : [(t.artists || '').toLowerCase().trim()];
+      return tName === aiName && tArtists.includes(aiArtist);
+    });
+    return match && match.spotify_url ? match.spotify_url : null;
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <TopBar>
@@ -186,7 +327,6 @@ export default function ResultsPage() {
       </TopBar>
       <Tabs>
         <Tab active={tab==='free'} onClick={()=>setTab('free')}>Free Matches</Tab>
-        <Tab active={tab==='recs'} onClick={()=>setTab('recs')}>AI Recs</Tab>
         <Tab active={tab==='profile'} onClick={()=>setTab('profile')}>Personality</Tab>
       </Tabs>
       <Content $fade={fade}>
@@ -215,8 +355,56 @@ export default function ResultsPage() {
             )}
           </>
         )}
-        {tab === 'recs' && <Recommendations list={recs} />}
-        {tab === 'profile' && <Personality text={profile} />}
+        {tab === 'profile' && (
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <div style={{ marginBottom: 24 }}>
+              <Personality text={profile} />
+            </div>
+            {/* Title above AI suggestions list */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              fontSize: '1.08rem',
+              fontWeight: 700,
+              marginBottom: '1.2rem'
+            }}>
+              {/* AI/robot icon in green */}
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1db954" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+                <rect x="3" y="8" width="18" height="8" rx="4" />
+                <path d="M12 8V4M8 4h8" />
+                <circle cx="8.5" cy="12" r="1" />
+                <circle cx="15.5" cy="12" r="1" />
+              </svg>
+              AI suggestions
+            </div>
+            <TrackList
+              tracks={aiTracks.map((t, i) => ({
+                ...t,
+                albumArt:
+                  (t.found_on_jamendo && t.found_on_jamendo.album_image)
+                  || t.albumArt
+                  || null,
+                spotify_url: getSpotifyUrlForAiTrack(t)
+              }))}
+              selected={aiSelected}
+              setSelected={setAiSelected}
+              loading={aiLoading}
+              Loader={aiLoading ? Loader : undefined}
+              downloadStatus={aiDownloadStatus}
+              showSpotifyLink={true}
+            />
+            {aiSelected.length > 0 && !aiLoading && (
+              <DownloadButton
+                selected={aiSelected.map(idx => aiTracks[idx])}
+                loading={aiLoading}
+                onDownload={handleAiDownload}
+                setDownloadStatus={setAiDownloadStatus}
+              />
+            )}
+          </div>
+        )}
       </Content>
       {/* Only show DownloadButton if not loading and tracks are loaded */}
       {selected.length > 0 && !initialLoading && (
