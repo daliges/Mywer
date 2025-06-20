@@ -76,17 +76,36 @@ export default function ResultsPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDownloadStatus, setAiDownloadStatus] = useState({});
 
+  const [aiRecCount, setAiRecCount] = useState(5);
+  const [aiTotalRequested, setAiTotalRequested] = useState(5); // tracks requested so far
+  const [aiAllRecs, setAiAllRecs] = useState([]); // all recs accumulated
+
+  // Fetch initial recommendations (or when playlist changes)
   useEffect(() => {
     setInitialLoading(true);
+    setRecs(null);
+    setProfile(null);
+    setAiAllRecs([]);
+    setAiRecCount(5);
+    setAiTotalRequested(5);
     Promise.all([
       findTracks(playlist).then(r => setTracks(r.data)),
-      getRecommendations(playlist).then(r => {
-        console.log("AI recommend response:", r.data); // <-- Add this line
+      getRecommendations({ ...playlist, count: 5 }).then(r => {
         setRecs(r.data.suggestions);
         setProfile(r.data.character);
+        setAiAllRecs(r.data.suggestions || []);
       })
     ]).finally(() => setInitialLoading(false));
+    // eslint-disable-next-line
   }, [playlist]);
+
+  // When recs change (from backend), update aiAllRecs if it's the initial load
+  useEffect(() => {
+    if (aiRecCount === 5 && recs && recs.length > 0) {
+      setAiAllRecs(recs);
+    }
+    // eslint-disable-next-line
+  }, [recs]);
 
   // Animate fade-out/fade-in on tab change
   useEffect(() => {
@@ -187,13 +206,11 @@ export default function ResultsPage() {
   // Fetch Jamendo matches for AI suggestions
   useEffect(() => {
     async function fetchAiMatches() {
-      if (!recs || !Array.isArray(recs)) return;
+      if (!aiAllRecs || !Array.isArray(aiAllRecs)) return;
       setAiLoading(true);
-      // For each suggestion, parse name/artist and build a fake playlist
-      const requests = recs.map(s => {
+      const requests = aiAllRecs.map(s => {
         const [name, ...rest] = s.split(' - ');
         const artist = rest.join(' - ').trim();
-        // Build a minimal playlist object as expected by /find-tracks/
         return findTracks({
           id: "https://fake.spotify.com/playlist/ai",
           tracks: {
@@ -208,18 +225,18 @@ export default function ResultsPage() {
               }
             }]
           }
-        }).then(r => r.data[0]); // Only one track per request
+        }).then(r => r.data[0]);
       });
       const results = await Promise.all(requests);
       setAiTracks(results);
-      setAiSelected([]); // Do NOT select all by default
+      setAiSelected([]);
       setAiLoading(false);
     }
-    if (tab === 'profile' && recs && recs.length > 0) {
+    if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
       fetchAiMatches();
     }
     // eslint-disable-next-line
-  }, [tab, recs]);
+  }, [tab, aiAllRecs]);
 
   // Download handler for AI tab
   const handleAiDownload = async (setError) => {
@@ -318,6 +335,44 @@ export default function ResultsPage() {
     return match && match.spotify_url ? match.spotify_url : null;
   }
 
+  // Fetch more recommendations and append to aiAllRecs
+  const handleShowMoreAiRecs = async () => {
+    const nextCount = Math.min(aiTotalRequested + 10, 35);
+    setAiLoading(true);
+    try {
+      const r = await getRecommendations({ ...playlist, count: nextCount });
+      const newRecs = r.data.suggestions || [];
+      // Only add new tracks (avoid duplicates)
+      const prevSet = new Set(aiAllRecs);
+      const uniqueNewRecs = newRecs.filter(x => !prevSet.has(x));
+      setAiAllRecs(prev => [...prev, ...uniqueNewRecs]);
+      // Fetch Jamendo matches for only the new recs
+      const requests = uniqueNewRecs.map(s => {
+        const [name, ...rest] = s.split(' - ');
+        const artist = rest.join(' - ').trim();
+        return findTracks({
+          id: "https://fake.spotify.com/playlist/ai",
+          tracks: {
+            items: [{
+              track: {
+                name: name?.trim() || '',
+                album: { name: '' },
+                artists: [{ name: artist || '' }],
+                albumArt: null,
+                duration: null,
+                isrc: null
+              }
+            }]
+          }
+        }).then(r => r.data[0]);
+      });
+      const results = await Promise.all(requests);
+      setAiTracks(prev => [...prev, ...results]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <TopBar>
@@ -390,19 +445,58 @@ export default function ResultsPage() {
               }))}
               selected={aiSelected}
               setSelected={setAiSelected}
-              loading={aiLoading}
-              Loader={aiLoading ? Loader : undefined}
+              loading={initialLoading}
+              Loader={initialLoading ? Loader : undefined}
               downloadStatus={aiDownloadStatus}
               showSpotifyLink={true}
             />
-            {aiSelected.length > 0 && !aiLoading && (
-              <DownloadButton
-                selected={aiSelected.map(idx => aiTracks[idx])}
-                loading={aiLoading}
-                onDownload={handleAiDownload}
-                setDownloadStatus={setAiDownloadStatus}
-              />
-            )}
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24, minHeight: 48 }}>
+              {/* Only show "Show More" if not loading and not all tracks loaded */}
+              {!aiLoading && aiAllRecs.length < 35 ? (
+                <button
+                  onClick={handleShowMoreAiRecs}
+                  disabled={aiLoading}
+                  style={{
+                    background: '#1db954',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 999,
+                    padding: '0.7rem 2.2rem',
+                    fontWeight: 700,
+                    fontSize: '1.08rem',
+                    cursor: aiLoading ? 'not-allowed' : 'pointer',
+                    opacity: aiLoading ? 0.7 : 1,
+                    boxShadow: '0 2px 8px 0 rgba(30,185,84,0.10)'
+                  }}
+                >
+                  Show More
+                </button>
+              ) : aiLoading ? (
+                <div style={{
+                  background: '#18181b',
+                  color: '#b3b3b3',
+                  borderRadius: 999,
+                  padding: '0.7rem 2.2rem',
+                  fontWeight: 500,
+                  fontSize: '1.08rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 48
+                }}>
+                  Loading more recommendations...
+                </div>
+              ) : (
+                aiSelected.length > 0 && !aiLoading && (
+                  <DownloadButton
+                    selected={aiSelected.map(idx => aiTracks[idx])}
+                    loading={aiLoading}
+                    onDownload={handleAiDownload}
+                    setDownloadStatus={setAiDownloadStatus}
+                  />
+                )
+              )}
+            </div>
           </div>
         )}
       </Content>

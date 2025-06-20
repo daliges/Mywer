@@ -9,6 +9,7 @@ export function findTracks(data) {
   return axios.post(`${BASE}/find-tracks/`, data);
 }
 export function getRecommendations(data) {
+  // Accepts either playlist or { ...playlist, count }
   return axios.post(`${BASE}/recommend/`, data);
 }
 export function downloadTracks(tracks) {

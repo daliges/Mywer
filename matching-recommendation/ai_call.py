@@ -20,18 +20,19 @@ class RecommendationResponse(BaseModel):
     stats: dict          # any fun numbers you collected
 
 _SYSTEM_MSG = "You are a friendly musicologist and ONLY output JSON."
-_PROMPT = (
+_PROMPT_TEMPLATE = (
     "Given this JSON list of tracks, 1) describe the listener's personality "
-    "in 3-4 sentences, 2) suggest 5 new tracks (as a list of strings, not objects!), "
+    "in 3-4 sentences, 2) suggest {count} new tracks (as a list of strings, not objects!), "
     "3) output fun stats as JSON. "
     "Return exactly a JSON object with keys: character, suggestions, stats."
 )
 
-def call_gemini(tracks_json: str) -> dict:
+def call_gemini(tracks_json: str, count: int) -> dict:
     try:
+        prompt = _PROMPT_TEMPLATE.format(count=count)
         response = _GEMINI_MODEL.generate_content(
             [
-                {"role": "user", "parts": [_PROMPT + tracks_json]},
+                {"role": "user", "parts": [prompt + tracks_json]},
             ],
             generation_config={"temperature": 0.7},
         )
@@ -50,8 +51,8 @@ def extract_json(text: str) -> str:
         return match.group(1).strip()
     return text.strip()
 
-async def analyse_with_gemini(tracks_json: str) -> dict:
+async def analyse_with_gemini(tracks_json: str, count: int = 5) -> dict:
     loop = asyncio.get_running_loop()
-    raw_json = await loop.run_in_executor(None, partial(call_gemini, tracks_json))
+    raw_json = await loop.run_in_executor(None, partial(call_gemini, tracks_json, count))
     clean_json = extract_json(raw_json)
     return RecommendationResponse.model_validate_json(clean_json).model_dump()

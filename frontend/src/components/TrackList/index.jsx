@@ -42,6 +42,8 @@ const SelectAllRow = styled.div`
   gap: 0.5rem;
   color: #fff;
   font-size: 1.08rem;
+  position: relative;
+  left: 11.6px; /* Visually aligns with checkboxes in TrackItem (tweak as needed, e.g. 68-74px) */
 `;
 
 const GreyCheckbox = styled.div`
