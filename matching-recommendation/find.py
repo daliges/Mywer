@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from dotenv import load_dotenv
 from pydantic import ValidationError
-from pydantic_models import Playlist
+from mywer_models.models import Playlist
 from difflib import SequenceMatcher
 import requests, json, os, logging
 
@@ -119,15 +119,22 @@ async def find_songs(playlist):
         album_art = getattr(item.track, "albumArt", None)
         orig_duration = getattr(item.track, "duration", None)
         orig_isrc = getattr(item.track, "isrc", None)
+        # --- Extract Spotify URL robustly ---
+        spotify_url = getattr(item.track, "external_url", None)
         # Search for the song in Jamendo with stricter checks
         founded_song = search_jamendo(song, main_artist, orig_duration, orig_isrc)
+        jamendo_url = None
+        if founded_song and founded_song.get("id"):
+            jamendo_url = f"https://www.jamendo.com/track/{founded_song['id']}"
         found_tracks.append({
             "song": song,
             "album": album,
             "artists": artists,
             "albumArt": album_art,
             "found_on_jamendo": founded_song,
-            "not_found_reason": None if founded_song else "No copyright-free match found"
+            "not_found_reason": None if founded_song else "No copyright-free match found",
+            "spotify_url": spotify_url,
+            "jamendo_url": jamendo_url
         })
     if not found_tracks:
         raise HTTPException(status_code=404, detail="No songs found in Free Music Archive or Jamendo")

@@ -1,4 +1,4 @@
-from pydantic_models import Playlist
+from mywer_models.models import Playlist
 from pydantic import BaseModel
 from typing import List, Dict
 

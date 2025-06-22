@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { FiCheck, FiExternalLink } from 'react-icons/fi';
+import { FiCheck, FiExternalLink, FiLink } from 'react-icons/fi';
 
 const Row = styled.div`
   display: flex;
@@ -10,6 +10,7 @@ const Row = styled.div`
   background: #18181b;
   margin-bottom: 0.75rem;
   gap: 1rem;
+  position: relative;
 `;
 
 const AlbumArt = styled.div`
@@ -73,6 +74,16 @@ const DownloadMsg = styled.div`
   word-break: break-word;
 `;
 
+const Links = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-left: 18px;
+  margin-right: 4px;
+  min-width: 0;
+`;
+
 // Always show one concise reason for each track, regardless of downloadStatus
 function getTrackReason(track) {
   if (track.found_on_jamendo) {
@@ -93,10 +104,17 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
   const albumArt =
     track.albumArt ||
     (track.found_on_jamendo && track.found_on_jamendo.album_image) ||
-    null; // null if not found
+    null;
 
   const { msg: downloadMsg, error: isError } = getTrackReason(track);
-  const spotifyUrl = track.spotify_url;
+
+  // --- Add Spotify and Jamendo URLs ---
+  const spotifyUrl = track.spotify_url || track.external_url || null;
+  const jamendoUrl =
+    track.jamendo_url ||
+    (track.found_on_jamendo && track.found_on_jamendo.id
+      ? `https://www.jamendo.com/track/${track.found_on_jamendo.id}`
+      : null);
 
   return (
     <Row>
@@ -118,23 +136,34 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
         )}
       </AlbumArt>
       <Info>
-        <Title>
-          {title}
-          {showSpotifyLink && spotifyUrl && (
-            <a
-              href={spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ marginLeft: 8, color: "#1db954", verticalAlign: "middle" }}
-              title="Open in Spotify"
-            >
-              <FiExternalLink size={16} />
-            </a>
-          )}
-        </Title>
+        <Title>{title}</Title>
         <Artist>{artist}</Artist>
         <DownloadMsg error={isError}>{downloadMsg}</DownloadMsg>
       </Info>
+      <Links>
+        {jamendoUrl && (
+          <a
+            href={jamendoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#ff8800", display: 'flex', alignItems: 'center' }}
+            title="Open in Jamendo"
+          >
+            <FiLink size={24} />
+          </a>
+        )}
+        {spotifyUrl && (
+          <a
+            href={spotifyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#1db954", display: 'flex', alignItems: 'center' }}
+            title="Open in Spotify"
+          >
+            <FiExternalLink size={24} />
+          </a>
+        )}
+      </Links>
     </Row>
   );
 }

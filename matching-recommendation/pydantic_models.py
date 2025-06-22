@@ -14,6 +14,7 @@ class Track(BaseModel):
     albumArt: Optional[str] = None
     duration: Optional[int] = None  # duration in seconds
     isrc: Optional[str] = None      # ISRC code
+    external_url: Optional[str] = None
 
 class Item(BaseModel):
     track: Track

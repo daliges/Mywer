@@ -1,7 +1,9 @@
 version: '3.8'
 services:
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -14,19 +16,25 @@ services:
       - SPOTIFY_URL=http://spotify:8003
 
   matching-recommendation:
-    build: ./matching-recommendation
+    build:
+      context: .
+      dockerfile: matching-recommendation/Dockerfile
     ports:
       - "8001:8001"
     env_file:
       - .env
 
   download:
-    build: ./download
+    build:
+      context: .
+      dockerfile: download/Dockerfile
     ports:
       - "8002:8002"
 
   spotify:
-    build: ./spotify
+    build:
+      context: .
+      dockerfile: spotify/Dockerfile
     ports:
       - "8003:8003"
     env_file:

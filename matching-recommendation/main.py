@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from find import find_songs
 from ai_call import analyse_with_gemini, RecommendationResponse
-from pydantic_models import Playlist
+from mywer_models.models import Playlist
 import logging
 import json
 

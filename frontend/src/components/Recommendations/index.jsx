@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { FiCpu } from 'react-icons/fi';
+import { FiCpu, FiExternalLink, FiLink } from 'react-icons/fi';
 
 // Use the same styled components as TrackList
 const Card = styled.div`
@@ -84,6 +84,16 @@ const Description = styled.div`
   text-align: center;
 `;
 
+const Links = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin-left: 18px;
+  margin-right: 4px;
+  min-width: 0;
+`;
+
 function parseTrack(str) {
   const [name, ...rest] = str.split(' - ');
   return {
@@ -140,10 +150,27 @@ export default function Recommendations({ list, personalityDescription, tracks =
   const recs = (list || []).map((s, i) => {
     const parsed = parseTrack(s);
     const albumArt = getAlbumArtForRecommendation(parsed, tracks);
+    // Try to find Spotify/Jamendo URLs from original tracks
+    let spotify_url = null, jamendo_url = null;
+    const match = tracks.find(t => {
+      const tName = norm(t.song || t.name);
+      const tArtists = Array.isArray(t.artists) ? t.artists.join(', ') : (t.artists || '');
+      return tName === norm(parsed.name) && norm(tArtists) === norm(parsed.artist);
+    });
+    if (match) {
+      spotify_url = match.spotify_url || match.external_url || null;
+      jamendo_url =
+        match.jamendo_url ||
+        (match.found_on_jamendo && match.found_on_jamendo.id
+          ? `https://www.jamendo.com/track/${match.found_on_jamendo.id}`
+          : null);
+    }
     return {
       label: s,
       ...parsed,
       albumArt,
+      spotify_url,
+      jamendo_url,
     };
   });
 
@@ -162,6 +189,30 @@ export default function Recommendations({ list, personalityDescription, tracks =
                 <TrackTitle>{t.name}</TrackTitle>
                 <TrackArtist>{t.artist}</TrackArtist>
               </Info>
+              <Links>
+                {t.jamendo_url && (
+                  <a
+                    href={t.jamendo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#ff8800", display: 'flex', alignItems: 'center' }}
+                    title="Open in Jamendo"
+                  >
+                    <FiLink size={24} />
+                  </a>
+                )}
+                {t.spotify_url && (
+                  <a
+                    href={t.spotify_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#1db954", display: 'flex', alignItems: 'center' }}
+                    title="Open in Spotify"
+                  >
+                    <FiExternalLink size={24} />
+                  </a>
+                )}
+              </Links>
             </Row>
           ))}
         </List>

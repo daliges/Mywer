@@ -17,9 +17,10 @@ FROM python:3.9
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY matching-recommendation/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY mywer_models ./mywer_models
+COPY matching-recommendation/. .
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

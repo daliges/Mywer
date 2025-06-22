@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic_models import Playlist
+from mywer_models.models import Playlist
 from dotenv import load_dotenv
 import requests
 import re
@@ -28,13 +28,16 @@ def transform_spotify_response(data: dict) -> dict:
         album_images = album_info.get("images", [])
         album_art = None
         if album_images:
-            # Try to get medium size (Spotify returns sorted by size desc)
             album_art = album_images[1]["url"] if len(album_images) > 1 else album_images[0]["url"]
         duration = track_info.get("duration_ms")
         isrc = None
         # ISRC is under external_ids if present
         if "external_ids" in track_info:
             isrc = track_info["external_ids"].get("isrc")
+        # --- Add external_url (Spotify track URL) ---
+        external_url = None
+        if "external_urls" in track_info and "spotify" in track_info["external_urls"]:
+            external_url = track_info["external_urls"]["spotify"]
         tracks.append({
             "track": {
                 "name": song_name,
@@ -42,7 +45,8 @@ def transform_spotify_response(data: dict) -> dict:
                 "artists": artists,
                 "albumArt": album_art,  # <-- add albumArt here
                 "duration": int(duration / 1000) if duration else None,
-                "isrc": isrc
+                "isrc": isrc,
+                "external_url": external_url  # <-- ensure this is always present
             }
         })
 

@@ -1,7 +1,7 @@
 import aiohttp, asyncio, io, json, logging, re, zipfile
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic_models import FoundTrack
+from mywer_models.models import FoundTrack
 from typing import Optional
 
 logger = logging.getLogger(__name__)
