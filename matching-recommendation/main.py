@@ -2,12 +2,15 @@ from fastapi import FastAPI, Request
 from find import find_songs
 from ai_call import analyse_with_gemini, RecommendationResponse
 from mywer_models.models import Playlist
+from dotenv import load_dotenv
 import logging
 import json
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+load_dotenv()
 
 if logger.level <= logging.DEBUG:
     logger.warning("Running in DEBUG mode. Do not use in production!")

@@ -23,6 +23,9 @@ services:
       - "8001:8001"
     env_file:
       - .env
+    environment:
+      - VAULT_ADDR=http://host.docker.internal:8200
+      - VAULT_TOKEN=hvs.EVYebKncbEkaZcNvX0XQWzvU
 
   download:
     build:
@@ -39,6 +42,9 @@ services:
       - "8003:8003"
     env_file:
       - .env
+    environment:
+      - VAULT_ADDR=http://host.docker.internal:8200
+      - VAULT_TOKEN=hvs.EVYebKncbEkaZcNvX0XQWzvU
 
   frontend:
     build:

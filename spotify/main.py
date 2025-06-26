@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Query, HTTPException
 from spotify import get_spotify_playlist, get_spotify_token
+from dotenv import load_dotenv
 import os
 import requests
 
 app = FastAPI()
+
+load_dotenv()
 
 @app.get("/playlist")
 async def get_playlist(playlist_url: str = Query(...)):

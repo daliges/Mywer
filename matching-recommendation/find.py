@@ -1,11 +1,20 @@
 from fastapi import HTTPException
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from pydantic import ValidationError
 from mywer_models.models import Playlist
 from difflib import SequenceMatcher
 import requests, json, os, logging
 
-load_dotenv()
+# --- Vault integration ---
+import hvac
+
+def get_vault_secret(key):
+    # Assumes VAULT_ADDR and VAULT_TOKEN are set in the environment
+    client = hvac.Client()
+    secret = client.secrets.kv.v2.read_secret_version(path='jamendo')
+    return secret['data']['data'].get(key)
+
+# load_dotenv()
 
 # Setup logging
 # logging.basicConfig(level=logging.INFO)  # <-- already commented out
@@ -42,10 +51,12 @@ def is_isrc_match(isrc1, isrc2):
 
 def search_jamendo(title, artist, orig_duration=None, orig_isrc=None):
     logger.info(f"DEBUG: search_jamendo called with title={title}, artist={artist}, duration={orig_duration}, isrc={orig_isrc}")
-    url = os.getenv("JAMENDO_API_URL") + "/tracks"
+    # url = os.getenv("JAMENDO_API_URL") + "/tracks"
+    url = get_vault_secret("JAMENDO_API_URL") + "/tracks"
     query = f"{title} {artist}".strip()
     params = {
-        "client_id": os.getenv("JAMENDO_CLIENT_ID"),
+        # "client_id": os.getenv("JAMENDO_CLIENT_ID"),
+        "client_id": get_vault_secret("JAMENDO_CLIENT_ID"),
         "format": "json",
         "search": query,
         "limit": 5

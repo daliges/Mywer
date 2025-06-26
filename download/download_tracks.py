@@ -7,6 +7,8 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 _illegal = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
 
+MAX_TRACKS = 50  # Set your desired maximum here
+
 def _safe(s: Optional[str], fallback: str) -> str:
     """Return a filesystem-safe string, or a fallback."""
     if not s:
@@ -14,6 +16,13 @@ def _safe(s: Optional[str], fallback: str) -> str:
     return _illegal.sub("_", str(s)).strip()[:150] or fallback
 
 async def download_tracks(tracks):
+    if len(tracks) > MAX_TRACKS:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": f"Too many tracks requested. Maximum allowed is {MAX_TRACKS}."
+            }
+        )
 
     not_found = []
     matched = []

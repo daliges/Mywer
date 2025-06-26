@@ -1,11 +1,17 @@
 from fastapi import APIRouter, HTTPException
 from mywer_models.models import Playlist
-from dotenv import load_dotenv
 import requests
 import re
 import os
 
-load_dotenv()
+# --- Vault integration ---
+import hvac
+
+def get_vault_secret(key):
+    # Assumes VAULT_ADDR and VAULT_TOKEN are set in the environment
+    client = hvac.Client()
+    secret = client.secrets.kv.v2.read_secret_version(path='spotify')
+    return secret['data']['data'].get(key)
 
 router = APIRouter()
 
@@ -58,11 +64,11 @@ def extract_playlist_id(url: str):
 
 def get_spotify_token():
     url = "https://accounts.spotify.com/api/token"
-    client_id = os.getenv("SPOTIFY_CLIENT_ID")
-    client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+    client_id = get_vault_secret("SPOTIFY_CLIENT_ID")
+    client_secret = get_vault_secret("SPOTIFY_CLIENT_SECRET")
 
     if not client_id or not client_secret:
-        return None  # Ensure environment variables are loaded
+        return None  # Ensure secrets are loaded
 
     data = {
         "grant_type": "client_credentials",
