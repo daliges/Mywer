@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FiChevronLeft } from 'react-icons/fi';
+import { FiChevronLeft, FiCopy, FiCheckCircle } from 'react-icons/fi';
 import TrackList from '../components/TrackList';
 import Recommendations from '../components/Recommendations';
 import Personality from '../components/Personality';
 import DownloadButton, { Loader } from '../components/DownloadButton';
 import { findTracks, getRecommendations, downloadTracks } from '../services/api';
 import styled from 'styled-components';
+import axios from 'axios';
 
 const Tabs = styled.div`
   display: flex;
@@ -79,6 +80,13 @@ export default function ResultsPage() {
   const [aiRecCount, setAiRecCount] = useState(5);
   const [aiTotalRequested, setAiTotalRequested] = useState(5); // tracks requested so far
   const [aiAllRecs, setAiAllRecs] = useState([]); // all recs accumulated
+  const [aiSpotifyData, setAiSpotifyData] = useState([]); // [{preview_url, spotify_url}, ...]
+
+  // --- Add state for AI copy selection (reuse aiSelected for both download/copy) ---
+  // aiSelected, setAiSelected already exist
+
+  // --- Add state for copy animation ---
+  const [copyAnim, setCopyAnim] = useState(false);
 
   // Fetch initial recommendations (or when playlist changes)
   useEffect(() => {
@@ -323,16 +331,41 @@ export default function ResultsPage() {
     return { errors, statusMap };
   };
 
-  // Helper to get Spotify link for AI suggestion (if exists in original playlist)
-  function getSpotifyUrlForAiTrack(aiTrack) {
-    const aiName = (aiTrack.song || aiTrack.name || '').toLowerCase().trim();
-    const aiArtist = (Array.isArray(aiTrack.artists) ? aiTrack.artists[0] : aiTrack.artists || '').toLowerCase().trim();
-    const match = tracks.find(t => {
-      const tName = (t.song || t.name || '').toLowerCase().trim();
-      const tArtists = Array.isArray(t.artists) ? t.artists.map(a => a.toLowerCase().trim()) : [(t.artists || '').toLowerCase().trim()];
-      return tName === aiName && tArtists.includes(aiArtist);
-    });
-    return match && match.spotify_url ? match.spotify_url : null;
+  // Helper: Search Spotify for a track and artist, return {spotify_url, preview_url}
+  async function searchSpotifyTrack(name, artist) {
+    // You need a backend endpoint to proxy Spotify API search (to avoid exposing your token)
+    // Here we assume you have /get-spotify-track/?name=...&artist=...
+    try {
+      const resp = await axios.get('http://localhost:8000/get-spotify-track/', {
+        params: { name, artist }
+      });
+      return resp.data; // { spotify_url, preview_url }
+    } catch {
+      return { spotify_url: null, preview_url: null };
+    }
+  }
+
+  // Fetch Spotify links and previews for AI recommendations
+  useEffect(() => {
+    async function fetchSpotifyData() {
+      if (!aiAllRecs || !Array.isArray(aiAllRecs)) return;
+      const requests = aiAllRecs.map(async s => {
+        const [name, ...rest] = s.split(' - ');
+        const artist = rest.join(' - ').trim();
+        return await searchSpotifyTrack(name?.trim() || '', artist || '');
+      });
+      const results = await Promise.all(requests);
+      setAiSpotifyData(results);
+    }
+    if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
+      fetchSpotifyData();
+    }
+    // eslint-disable-next-line
+  }, [tab, aiAllRecs]);
+
+  // Helper to get Spotify/preview for AI track
+  function getAiSpotifyData(idx) {
+    return aiSpotifyData[idx] || {};
   }
 
   // Fetch more recommendations and append to aiAllRecs
@@ -370,6 +403,25 @@ export default function ResultsPage() {
       setAiTracks(prev => [...prev, ...results]);
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  function getJamendoUrlForAiTrack(aiTrack) {
+    if (aiTrack.jamendo_url) return aiTrack.jamendo_url;
+    if (aiTrack.found_on_jamendo && aiTrack.found_on_jamendo.id)
+      return `https://www.jamendo.com/track/${aiTrack.found_on_jamendo.id}`;
+    return null;
+  }
+
+  // --- Handler for Copy to Clipboard ---
+  const handleCopyAiTracks = () => {
+    const lines = aiSelected
+      .map(idx => aiAllRecs[idx])
+      .filter(Boolean);
+    if (lines.length > 0) {
+      navigator.clipboard.writeText(lines.join('\n'));
+      setCopyAnim(true);
+      setTimeout(() => setCopyAnim(false), 1200);
     }
   };
 
@@ -435,14 +487,19 @@ export default function ResultsPage() {
               AI suggestions
             </div>
             <TrackList
-              tracks={aiTracks.map((t, i) => ({
-                ...t,
-                albumArt:
-                  (t.found_on_jamendo && t.found_on_jamendo.album_image)
-                  || t.albumArt
-                  || null,
-                spotify_url: getSpotifyUrlForAiTrack(t)
-              }))}
+              tracks={aiTracks.map((t, i) => {
+                const { spotify_url, preview_url } = getAiSpotifyData(i);
+                return {
+                  ...t,
+                  albumArt:
+                    (t.found_on_jamendo && t.found_on_jamendo.album_image)
+                    || t.albumArt
+                    || null,
+                  spotify_url,
+                  preview_url,
+                  jamendo_url: getJamendoUrlForAiTrack(t),
+                };
+              })}
               selected={aiSelected}
               setSelected={setAiSelected}
               loading={initialLoading}
@@ -450,8 +507,8 @@ export default function ResultsPage() {
               downloadStatus={aiDownloadStatus}
               showSpotifyLink={true}
             />
+            {/* Restore "Show More" button for more recommendations */}
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24, minHeight: 48 }}>
-              {/* Only show "Show More" if not loading and not all tracks loaded */}
               {!aiLoading && aiAllRecs.length < 35 ? (
                 <button
                   onClick={handleShowMoreAiRecs}
@@ -509,6 +566,46 @@ export default function ResultsPage() {
           setDownloadStatus={setDownloadStatus}
         />
       )}
+      {/* --- Persistent Copy button for AI tab, only show if at least one selected --- */}
+      {tab === 'profile' && !aiLoading && aiSelected.length > 0 && (
+        <button
+          onClick={handleCopyAiTracks}
+          disabled={aiSelected.length === 0}
+          style={{
+            position: 'fixed',
+            bottom: 32,
+            right: 32,
+            zIndex: 120,
+            background: copyAnim ? '#1db954' : '#1db954',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 999,
+            padding: '0.8rem 2.1rem',
+            fontWeight: 700,
+            fontSize: '1.13rem',
+            cursor: aiSelected.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: aiSelected.length === 0 ? 0.7 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            transition: 'background 0.2s, box-shadow 0.2s, color 0.2s',
+            boxShadow: copyAnim ? '0 0 0 6px #1db95444' : '0 2px 16px 0 rgba(30,185,84,0.10)'
+          }}
+          title="Copy selected tracks to clipboard"
+        >
+          {copyAnim ? (
+            <>
+              <FiCheckCircle style={{ marginRight: 4, color: '#fff', transition: 'color 0.2s' }} />
+              Copied!
+            </>
+          ) : (
+            <>
+              <FiCopy style={{ marginRight: 4 }} /> Copy
+            </>
+          )}
+        </button>
+      )}
+      {/* ...existing code... */}
     </div>
   );
 }

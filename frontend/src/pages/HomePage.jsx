@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/SearchBar';
 import { getPlaylist } from '../services/api';
@@ -80,6 +80,8 @@ const GitHubButton = () => {
 
 export default function HomePage() {
   const [url, setUrl] = useState('');
+  const [search, setSearch] = useState('');
+  const inputRef = useRef();
   const navigate = useNavigate();
 
   const handleSearch = async () => {
@@ -125,13 +127,21 @@ export default function HomePage() {
                 <FiDownload size={36} style={{ color: "#1DB954", marginBottom: 12 }} />
                 <div style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: 4 }}>Download for free</div>
                 <div style={{ fontWeight: 400, fontSize: '1rem', color: '#b3b3b3', maxWidth: 220 }}>
-                  Legally download high-quality tracks for your collection
+                  Legally download high-quality tracks from your collection
                 </div>
               </div>
             </li>
           </Features>
         </HeroContent>
       </HeroSection>
+      <div>
+        <input
+          ref={inputRef}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ display: 'none' }} // Hide the input field
+        />
+      </div>
       <Footer>
         <div style={{
           display: 'flex',

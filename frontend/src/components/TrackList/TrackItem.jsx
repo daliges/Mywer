@@ -84,6 +84,20 @@ const Links = styled.div`
   min-width: 0;
 `;
 
+const PreviewButton = styled.button`
+  background: #222;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1db954;
+  cursor: pointer;
+  &:hover { background: #333; }
+`;
+
 // Always show one concise reason for each track, regardless of downloadStatus
 function getTrackReason(track) {
   if (track.found_on_jamendo) {
@@ -116,6 +130,34 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
       ? `https://www.jamendo.com/track/${track.found_on_jamendo.id}`
       : null);
 
+  // --- Audio preview logic ---
+  const [playing, setPlaying] = React.useState(false);
+  const audioRef = React.useRef(null);
+  const previewUrl = track.preview_url || null;
+
+  React.useEffect(() => {
+    if (!playing && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [playing]);
+
+  function handlePreviewClick(e) {
+    e.stopPropagation();
+    if (playing) {
+      setPlaying(false);
+    } else {
+      setPlaying(true);
+      if (audioRef.current) {
+        audioRef.current.play();
+      }
+    }
+  }
+
+  function handleAudioEnded() {
+    setPlaying(false);
+  }
+
   return (
     <Row>
       <CustomCheckbox checked={checked} onClick={onCheck} tabIndex={0} role="checkbox" aria-checked={checked}>
@@ -141,6 +183,31 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
         <DownloadMsg error={isError}>{downloadMsg}</DownloadMsg>
       </Info>
       <Links>
+        {previewUrl && (
+          <>
+            <PreviewButton onClick={handlePreviewClick} title={playing ? "Pause preview" : "Play preview"}>
+              {playing ? (
+                // Pause icon
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              ) : (
+                // Play icon
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <polygon points="5,3 19,12 5,21 5,3" />
+                </svg>
+              )}
+            </PreviewButton>
+            <audio
+              ref={audioRef}
+              src={previewUrl}
+              onEnded={handleAudioEnded}
+              onPause={() => setPlaying(false)}
+              style={{ display: 'none' }}
+            />
+          </>
+        )}
         {jamendoUrl && (
           <a
             href={jamendoUrl}
