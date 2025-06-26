@@ -51,6 +51,29 @@ def extract_json(text: str) -> str:
         return match.group(1).strip()
     return text.strip()
 
+def sanitize_text(s):
+    # Remove control chars, excessive whitespace, and limit length
+    if not isinstance(s, str):
+        return ""
+    s = re.sub(r"[\x00-\x1f\x7f]", "", s)
+    s = s.strip()
+    return s[:200]  # Limit to 200 chars
+
+def sanitize_playlist(playlist_json):
+    import json
+    try:
+        data = json.loads(playlist_json)
+        for track in data.get("items", []):
+            for k in ["name", "song", "artist", "artists", "album"]:
+                if k in track:
+                    if isinstance(track[k], list):
+                        track[k] = [sanitize_text(x) for x in track[k]]
+                    else:
+                        track[k] = sanitize_text(track[k])
+        return json.dumps(data)
+    except Exception:
+        return playlist_json
+
 async def analyse_with_gemini(tracks_json: str, count: int = 5) -> dict:
     loop = asyncio.get_running_loop()
     raw_json = await loop.run_in_executor(None, partial(call_gemini, tracks_json, count))

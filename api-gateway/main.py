@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 import logging
 import traceback
+import time
+from starlette.middleware.base import BaseHTTPMiddleware
 
 app = FastAPI()
 
@@ -18,15 +20,45 @@ if not logger.hasHandlers():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
+# --- Rate Limiting Middleware ---
+RATE_LIMIT = int(os.getenv("RATE_LIMIT", "60"))  # requests per window
+RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))  # seconds
+_client_requests = {}
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        ip = request.client.host
+        now = int(time.time())
+        window = now // RATE_WINDOW
+        key = f"{ip}:{window}"
+        count = _client_requests.get(key, 0)
+        if count >= RATE_LIMIT:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded. Try again later."}
+            )
+        _client_requests[key] = count + 1
+        # Clean up old windows
+        for k in list(_client_requests):
+            if int(k.split(":")[1]) < window:
+                _client_requests.pop(k)
+        return await call_next(request)
+
+app.add_middleware(RateLimitMiddleware)
+
 # Add CORS middleware
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[o.strip() for o in CORS_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "X-Not-Found"],
 )
+
+if "localhost" in CORS_ORIGINS or "*" in CORS_ORIGINS:
+    logger.warning("CORS is set to allow localhost or all origins. Do not use in production!")
 
 MATCHING_URL = os.getenv("MATCHING_RECOMMENDATION_URL", "http://localhost:8001")
 DOWNLOAD_URL = os.getenv("DOWNLOAD_URL", "http://localhost:8002")

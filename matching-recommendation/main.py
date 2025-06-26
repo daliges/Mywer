@@ -9,6 +9,9 @@ app = FastAPI()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+if logger.level <= logging.DEBUG:
+    logger.warning("Running in DEBUG mode. Do not use in production!")
+
 @app.post("/match")
 async def match_tracks(playlist: Playlist):
     logger.info(f"Received playlist for /match: {playlist.id}")
