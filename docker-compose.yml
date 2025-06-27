@@ -24,8 +24,8 @@ services:
     env_file:
       - .env
     environment:
-      - VAULT_ADDR=http://host.docker.internal:8200
-      - VAULT_TOKEN=hvs.EVYebKncbEkaZcNvX0XQWzvU
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_TOKEN=${VAULT_TOKEN}
 
   download:
     build:
@@ -43,8 +43,8 @@ services:
     env_file:
       - .env
     environment:
-      - VAULT_ADDR=http://host.docker.internal:8200
-      - VAULT_TOKEN=hvs.EVYebKncbEkaZcNvX0XQWzvU
+      - VAULT_ADDR=${VAULT_ADDR}
+      - VAULT_TOKEN=${VAULT_TOKEN}
 
   frontend:
     build:

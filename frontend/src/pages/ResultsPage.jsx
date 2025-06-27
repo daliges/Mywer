@@ -486,6 +486,7 @@ export default function ResultsPage() {
               </svg>
               AI suggestions
             </div>
+            {/* Use TrackList for AI suggestions, same as Free Matches */}
             <TrackList
               tracks={aiTracks.map((t, i) => {
                 const { spotify_url, preview_url } = getAiSpotifyData(i);
