@@ -237,7 +237,7 @@ export default function ResultsPage() {
       });
       const results = await Promise.all(requests);
       setAiTracks(results);
-      setAiSelected([]);
+      // Do not reset aiSelected here
       setAiLoading(false);
     }
     if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
@@ -245,6 +245,11 @@ export default function ResultsPage() {
     }
     // eslint-disable-next-line
   }, [tab, aiAllRecs]);
+
+  // Reset aiSelected only when aiTracks changes (e.g. after loading new tracks)
+  useEffect(() => {
+    setAiSelected([]);
+  }, [aiTracks]);
 
   // Download handler for AI tab
   const handleAiDownload = async (setError) => {
@@ -425,6 +430,20 @@ export default function ResultsPage() {
     }
   };
 
+  // Clear selected when switching to 'profile' tab
+  useEffect(() => {
+    if (tab === 'profile' && selected.length > 0) {
+      setSelected([]);
+    }
+  }, [tab]); // Only runs when tab changes
+
+  // Clear selected when leaving 'free' tab
+  useEffect(() => {
+    if (tab !== 'free' && selected.length > 0) {
+      setSelected([]);
+    }
+  }, [tab]); // Only runs when tab changes
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <TopBar>
@@ -459,6 +478,15 @@ export default function ResultsPage() {
               }}>
                 <Loader />
               </div>
+            )}
+            {/* Only show DownloadButton if not loading and tracks are loaded, and only in free tab */}
+            {selected.length > 0 && !initialLoading && (
+              <DownloadButton
+                selected={selected.map(idx => tracks[idx])}
+                loading={loading}
+                onDownload={handleDownload}
+                setDownloadStatus={setDownloadStatus}
+              />
             )}
           </>
         )}
@@ -503,8 +531,8 @@ export default function ResultsPage() {
               })}
               selected={aiSelected}
               setSelected={setAiSelected}
-              loading={initialLoading}
-              Loader={initialLoading ? Loader : undefined}
+              loading={initialLoading || aiLoading}
+              // Remove Loader prop for personality tab
               downloadStatus={aiDownloadStatus}
               showSpotifyLink={true}
             />
@@ -544,31 +572,13 @@ export default function ResultsPage() {
                 }}>
                   Loading more recommendations...
                 </div>
-              ) : (
-                aiSelected.length > 0 && !aiLoading && (
-                  <DownloadButton
-                    selected={aiSelected.map(idx => aiTracks[idx])}
-                    loading={aiLoading}
-                    onDownload={handleAiDownload}
-                    setDownloadStatus={setAiDownloadStatus}
-                  />
-                )
-              )}
+              ) : null}
             </div>
           </div>
         )}
       </Content>
-      {/* Only show DownloadButton if not loading and tracks are loaded */}
-      {selected.length > 0 && !initialLoading && (
-        <DownloadButton
-          selected={selected.map(idx => tracks[idx])}
-          loading={loading}
-          onDownload={handleDownload}
-          setDownloadStatus={setDownloadStatus}
-        />
-      )}
       {/* --- Persistent Copy button for AI tab, only show if at least one selected --- */}
-      {tab === 'profile' && !aiLoading && aiSelected.length > 0 && (
+      {tab === 'profile' && aiSelected.length > 0 && (
         <button
           onClick={handleCopyAiTracks}
           disabled={aiSelected.length === 0}
@@ -606,7 +616,6 @@ export default function ResultsPage() {
           )}
         </button>
       )}
-      {/* ...existing code... */}
     </div>
   );
 }

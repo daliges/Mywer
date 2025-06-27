@@ -160,7 +160,7 @@ export default function HomePage() {
           }}>
             <span style={{ color: '#1DB954', display: 'flex', alignItems: 'center' }}>
               <FiMusic size={20} style={{ marginRight: 4 }} />
-              <span style={{ fontWeight: 700 }}>Musicdw</span>
+              <span style={{ fontWeight: 700 }}>Mywer</span>
             </span>
           </div>
           <div style={{
@@ -179,7 +179,7 @@ export default function HomePage() {
             fontSize: '0.92rem',
             marginTop: 2
           }}>
-            © 2025 Musicdw. All rights reserved.
+            © 2025 Mywer. All rights reserved.
           </div>
         </div>
       </Footer>
