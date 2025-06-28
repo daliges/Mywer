@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE = "http://localhost:8000";
+const BASE = "https://api-gateway-2uhr.onrender.com";
 
 export function getPlaylist(url) {
   return axios.get(`${BASE}/get-playlist/`, { params: { playlist_url: url } });
