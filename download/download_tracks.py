@@ -1,4 +1,10 @@
-import aiohttp, asyncio, io, json, logging, re, zipfile
+import aiohttp
+import asyncio
+import io
+import json
+import logging
+import re
+import zipfile
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from mywer_models.models import FoundTrack
@@ -9,20 +15,19 @@ _illegal = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
 
 MAX_TRACKS = 50  # Set your desired maximum here
 
+
 def _safe(s: Optional[str], fallback: str) -> str:
     """Return a filesystem-safe string, or a fallback."""
     if not s:
         return fallback
     return _illegal.sub("_", str(s)).strip()[:150] or fallback
 
+
 async def download_tracks(tracks):
     if len(tracks) > MAX_TRACKS:
         return JSONResponse(
-            status_code=400,
-            content={
-                "detail": f"Too many tracks requested. Maximum allowed is {MAX_TRACKS}."
-            }
-        )
+            status_code=400, content={
+                "detail": f"Too many tracks requested. Maximum allowed is {MAX_TRACKS}."})
 
     not_found = []
     matched = []
@@ -30,7 +35,14 @@ async def download_tracks(tracks):
     # To support both, use hasattr/t.get fallback.
     for t in tracks:
         # Try attribute access (Pydantic model), else dict access
-        get = (lambda k: getattr(t, k, None)) if hasattr(t, "__dict__") else (lambda k: t.get(k))
+        get = (
+            lambda k: getattr(
+                t,
+                k,
+                None)) if hasattr(
+            t,
+            "__dict__") else (
+                lambda k: t.get(k))
         audio_url = get("audiodownload") or get("audio")
         name = get("name") or get("song") or "Unknown"
         artists = get("artists") or []
@@ -39,7 +51,8 @@ async def download_tracks(tracks):
         if audio_url:
             matched.append(t)
         else:
-            reason = get("not_found_reason") or "Not found or not copyright free"
+            reason = get(
+                "not_found_reason") or "Not found or not copyright free"
             not_found.append({
                 "track": f"{name} - {', '.join(artists)}",
                 "reason": reason
@@ -59,7 +72,14 @@ async def download_tracks(tracks):
         async with aiohttp.ClientSession() as session:
             with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
                 for t in matched:
-                    get = (lambda k: getattr(t, k, None)) if hasattr(t, "__dict__") else (lambda k: t.get(k))
+                    get = (
+                        lambda k: getattr(
+                            t,
+                            k,
+                            None)) if hasattr(
+                        t,
+                        "__dict__") else (
+                        lambda k: t.get(k))
                     try:
                         download_url = get("audiodownload") or get("audio")
                         name = get("name") or get("song") or "Unknown"
@@ -82,15 +102,17 @@ async def download_tracks(tracks):
                                 continue
                             data = await resp.read()
 
-                        artist_part = _safe(", ".join(artists), "Unknown Artist")
-                        title_part  = _safe(name, "Unknown Title")
-                        filename    = f"{artist_part} - {title_part}.mp3"
+                        artist_part = _safe(
+                            ", ".join(artists), "Unknown Artist")
+                        title_part = _safe(name, "Unknown Title")
+                        filename = f"{artist_part} - {title_part}.mp3"
 
                         zf.writestr(filename, data)
                         logger.info("Added %s", filename)
 
                     except Exception as e:
-                        logger.exception("Error handling track %s: %s", name, e)
+                        logger.exception(
+                            "Error handling track %s: %s", name, e)
                         not_found.append({
                             "track": f"{name} - {', '.join(artists)}",
                             "reason": "Download error"
@@ -110,7 +132,8 @@ async def download_tracks(tracks):
             "Content-Disposition": 'attachment; filename="selected_tracks.zip"'
         }
         if not_found:
-            headers["X-Not-Found"] = json.dumps(not_found, ensure_ascii=True, separators=(',', ':'))
+            headers["X-Not-Found"] = json.dumps(not_found,
+                                                ensure_ascii=True, separators=(',', ':'))
         return StreamingResponse(
             buf,
             media_type="application/zip",

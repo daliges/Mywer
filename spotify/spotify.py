@@ -7,34 +7,40 @@ import os
 # --- Vault integration ---
 import hvac
 
+
 def get_vault_secret(key):
     # Assumes VAULT_ADDR and VAULT_TOKEN are set in the environment
     client = hvac.Client()
     secret = client.secrets.kv.v2.read_secret_version(path='dev/api-key')
     return secret['data']['data'].get(key)
 
+
 router = APIRouter()
 
 SPOTIFY_API_URL = "https://api.spotify.com/v1"
 
 # Function to transform API response
+
+
 def transform_spotify_response(data: dict) -> dict:
     playlist_name = data.get("name", "Unknown Playlist")
     tracks = []
 
     for item in data["tracks"]["items"]:
         track_info = item.get("track", {})
-        
+
         # Extracting required fields
         song_name = track_info.get("name", "Unknown Song")
         album_info = track_info.get("album", {})
         album_name = album_info.get("name", "Unknown Album")
-        artists = [{"name": artist["name"]} for artist in track_info.get("artists", [])]
+        artists = [{"name": artist["name"]}
+                   for artist in track_info.get("artists", [])]
         # Get album art (prefer medium size, fallback to first)
         album_images = album_info.get("images", [])
         album_art = None
         if album_images:
-            album_art = album_images[1]["url"] if len(album_images) > 1 else album_images[0]["url"]
+            album_art = album_images[1]["url"] if len(
+                album_images) > 1 else album_images[0]["url"]
         duration = track_info.get("duration_ms")
         isrc = None
         # ISRC is under external_ids if present
@@ -56,11 +62,16 @@ def transform_spotify_response(data: dict) -> dict:
             }
         })
 
-    return {"id": data["external_urls"]["spotify"], "tracks": {"items": tracks}}
+    return {
+        "id": data["external_urls"]["spotify"],
+        "tracks": {
+            "items": tracks}}
+
 
 def extract_playlist_id(url: str):
     match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
     return match.group(1) if match else None
+
 
 def get_spotify_token():
     url = "https://accounts.spotify.com/api/token"
@@ -76,13 +87,14 @@ def get_spotify_token():
         "client_secret": client_secret
     }
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    
+
     response = requests.post(url, data=data, headers=headers)
-    
+
     if response.status_code == 200:
         return response.json()["access_token"]
-    
+
     return None
+
 
 async def get_spotify_playlist(playlist_url: str):
 
@@ -92,15 +104,23 @@ async def get_spotify_playlist(playlist_url: str):
 
     token = get_spotify_token()
     if not token:
-        raise HTTPException(status_code=500, detail="Failed to authenticate with Spotify")
+        raise HTTPException(status_code=500,
+                            detail="Failed to authenticate with Spotify")
 
     headers = {"Authorization": f"Bearer {token}"}
-    response = requests.get(f"{SPOTIFY_API_URL}/playlists/{playlist_id}", headers=headers)
+    response = requests.get(
+        f"{SPOTIFY_API_URL}/playlists/{playlist_id}",
+        headers=headers)
 
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail="Failed to fetch playlist")
+        raise HTTPException(
+            status_code=response.status_code,
+            detail="Failed to fetch playlist")
 
     transformed_data = transform_spotify_response(response.json())
 
     transformed_data.pop("id", None)  # Removes Spotify's 'id' if it exists
     return Playlist(id=playlist_url, **transformed_data)
+
+# Export extract_playlist_id for testing
+__all__ = ["get_spotify_playlist", "get_spotify_token", "extract_playlist_id"]

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
-from spotify import get_spotify_playlist, get_spotify_token
+from spotify.spotify import get_spotify_playlist, get_spotify_token
 from dotenv import load_dotenv
 import os
 import requests
@@ -8,9 +8,11 @@ app = FastAPI()
 
 load_dotenv()
 
+
 @app.get("/playlist")
 async def get_playlist(playlist_url: str = Query(...)):
     return await get_spotify_playlist(playlist_url)
+
 
 @app.get("/get-spotify-track/")
 def get_spotify_track(name: str, artist: str):
@@ -26,7 +28,9 @@ def get_spotify_track(name: str, artist: str):
         resp = requests.get(url, headers=headers, params=params, timeout=10)
         resp.raise_for_status()
     except requests.RequestException as e:
-        raise HTTPException(status_code=503, detail=f"Spotify API error: {str(e)}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Spotify API error: {str(e)}")
     try:
         data = resp.json()
         items = data.get("tracks", {}).get("items", [])
@@ -38,4 +42,6 @@ def get_spotify_track(name: str, artist: str):
             "preview_url": track.get("preview_url")
         }
     except (ValueError, KeyError):
-        raise HTTPException(status_code=502, detail="Invalid Spotify API response")
+        raise HTTPException(
+            status_code=502,
+            detail="Invalid Spotify API response")

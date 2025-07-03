@@ -3,22 +3,22 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: api-gateway/Dockerfile
+      dockerfile: api_gateway/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
-      - matching-recommendation
+      - matching_recommendation
       - download
       - spotify
     environment:
-      - MATCHING_RECOMMENDATION_URL=http://matching-recommendation:8001
+      - MATCHING_RECOMMENDATION_URL=http://matching_recommendation:8001
       - DOWNLOAD_URL=http://download:8002
       - SPOTIFY_URL=http://spotify:8003
 
-  matching-recommendation:
+  matching_recommendation:
     build:
       context: .
-      dockerfile: matching-recommendation/Dockerfile
+      dockerfile: matching_recommendation/Dockerfile
     ports:
       - "8001:8001"
     env_file:

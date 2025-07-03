@@ -1,11 +1,9 @@
-FROM python:3.9
+FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY download/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY . /app
 
-COPY mywer_models ./mywer_models
-COPY download/. .
+RUN pip install --no-cache-dir -r download/requirements.txt
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uvicorn", "download.main:app", "--host", "0.0.0.0", "--port", "8002"]

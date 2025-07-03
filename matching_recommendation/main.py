@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
-from find import find_songs
-from ai_call import analyse_with_gemini, RecommendationResponse
+from matching_recommendation.find import find_songs
+from matching_recommendation.ai_call import analyse_with_gemini, RecommendationResponse
 from mywer_models.models import Playlist
 from dotenv import load_dotenv
 import logging
@@ -15,10 +15,12 @@ load_dotenv()
 if logger.level <= logging.DEBUG:
     logger.warning("Running in DEBUG mode. Do not use in production!")
 
+
 @app.post("/match")
 async def match_tracks(playlist: Playlist):
     logger.info(f"Received playlist for /match: {playlist.id}")
     return await find_songs(playlist)
+
 
 @app.post("/recommend")
 async def recommend(request: Request):
@@ -28,7 +30,8 @@ async def recommend(request: Request):
     # Remove "count" before parsing as Playlist
     playlist_data = {k: v for k, v in body.items() if k != "count"}
     playlist = Playlist(**playlist_data)
-    logger.info(f"Received playlist for /recommend: {playlist.id} (count={count})")
+    logger.info(
+        f"Received playlist for /recommend: {playlist.id} (count={count})")
     logger.info(f"Tracks: {playlist.tracks.items}")
     data = await analyse_with_gemini(playlist.tracks.model_dump_json(), count)
     logger.info(f"AI response: {data}")
