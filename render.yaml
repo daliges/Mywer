@@ -3,7 +3,7 @@ services:
     name: mywer-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: build
     envVars:
       - key: REACT_APP_API_URL
