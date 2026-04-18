@@ -12,6 +12,7 @@ services:
   - type: web
     name: mywer-api-gateway
     runtime: docker
+    plan: free
     dockerfilePath: api_gateway/Dockerfile
     envVars:
       - key: MATCHING_RECOMMENDATION_URL
@@ -26,6 +27,7 @@ services:
   - type: web
     name: mywer-matching
     runtime: docker
+    plan: free
     dockerfilePath: matching_recommendation/Dockerfile
     envVars:
       - key: GEMINI_API_KEY
@@ -38,11 +40,13 @@ services:
   - type: web
     name: mywer-download
     runtime: docker
+    plan: free
     dockerfilePath: download/Dockerfile
 
   - type: web
     name: mywer-spotify
     runtime: docker
+    plan: free
     dockerfilePath: spotify/Dockerfile
     envVars:
       - key: SPOTIFY_CLIENT_ID
