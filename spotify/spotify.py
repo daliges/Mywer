@@ -3,16 +3,9 @@ from mywer_models.models import Playlist
 import requests
 import re
 import os
+from dotenv import load_dotenv
 
-# --- Vault integration ---
-import hvac
-
-
-def get_vault_secret(key):
-    # Assumes VAULT_ADDR and VAULT_TOKEN are set in the environment
-    client = hvac.Client()
-    secret = client.secrets.kv.v2.read_secret_version(path='dev/api-key')
-    return secret['data']['data'].get(key)
+load_dotenv()
 
 
 router = APIRouter()
@@ -75,8 +68,8 @@ def extract_playlist_id(url: str):
 
 def get_spotify_token():
     url = "https://accounts.spotify.com/api/token"
-    client_id = get_vault_secret("SPOTIFY_CLIENT_ID")
-    client_secret = get_vault_secret("SPOTIFY_CLIENT_SECRET")
+    client_id = os.getenv("SPOTIFY_CLIENT_ID")
+    client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 
     if not client_id or not client_secret:
         return None  # Ensure secrets are loaded

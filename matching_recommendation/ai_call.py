@@ -8,7 +8,9 @@ import google.generativeai as genai
 import asyncio
 from functools import partial
 import logging
+from dotenv import load_dotenv
 
+load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 _GEMINI_MODEL = genai.GenerativeModel("gemini-2.0-flash")     # text-only model
 
@@ -19,7 +21,7 @@ logger.setLevel(logging.INFO)
 class RecommendationResponse(BaseModel):
     character: str
     suggestions: list[str]
-    stats: dict          # any fun numbers you collected
+    stats: dict
 
 
 _SYSTEM_MSG = "You are a friendly musicologist and ONLY output JSON."

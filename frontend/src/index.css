@@ -1,21 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+input:focus,
+input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 html {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
 }
 
 body {
-  @apply bg-background text-foreground;
-}
-
-.spotify-search-button {
-  @apply bg-primary hover:bg-primary-600 transition-all;
-}
-
-.track-card {
-  @apply transition-all duration-200 hover:bg-content2 cursor-pointer;
+  background: #080c14;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
