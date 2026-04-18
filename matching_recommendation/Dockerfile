@@ -6,4 +6,4 @@ COPY . /app
 
 RUN pip install --no-cache-dir -r matching_recommendation/requirements.txt
 
-CMD ["uvicorn", "matching_recommendation.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["sh", "-c", "uvicorn matching_recommendation.main:app --host 0.0.0.0 --port ${PORT:-8001}"]

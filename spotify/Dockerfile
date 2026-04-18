@@ -6,4 +6,4 @@ COPY . /app
 
 RUN pip install --no-cache-dir -r spotify/requirements.txt
 
-CMD ["uvicorn", "spotify.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["sh", "-c", "uvicorn spotify.main:app --host 0.0.0.0 --port ${PORT:-8003}"]

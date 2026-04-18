@@ -6,4 +6,4 @@ COPY . /app
 
 RUN pip install --no-cache-dir -r download/requirements.txt
 
-CMD ["uvicorn", "download.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["sh", "-c", "uvicorn download.main:app --host 0.0.0.0 --port ${PORT:-8002}"]
