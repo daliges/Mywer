@@ -31,4 +31,4 @@ uvicorn==0.34.0
 wrapt==1.17.2
 requests==2.32.3
 aiohttp
-aiofiles
+aiofiles 

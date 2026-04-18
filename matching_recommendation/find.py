@@ -7,22 +7,12 @@ import requests
 import json
 import os
 import logging
+from dotenv import load_dotenv
 
-# --- Vault integration ---
-import hvac
-
-
-def get_vault_secret(key):
-    # Assumes VAULT_ADDR and VAULT_TOKEN are set in the environment
-    client = hvac.Client()
-    secret = client.secrets.kv.v2.read_secret_version(path='dev/api-key')
-    return secret['data']['data'].get(key)
-
-# load_dotenv()
+load_dotenv()
 
 
 # Setup logging
-# logging.basicConfig(level=logging.INFO)  # <-- already commented out
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)  # Ensure logger level is INFO
 
@@ -64,12 +54,10 @@ def is_isrc_match(isrc1, isrc2):
 def search_jamendo(title, artist, orig_duration=None, orig_isrc=None):
     logger.info(
         f"DEBUG: search_jamendo called with title={title}, artist={artist}, duration={orig_duration}, isrc={orig_isrc}")
-    # url = os.getenv("JAMENDO_API_URL") + "/tracks"
-    url = get_vault_secret("JAMENDO_API_URL") + "/tracks"
+    url = os.getenv("JAMENDO_API_URL") + "/tracks"
     query = f"{title} {artist}".strip()
     params = {
-        # "client_id": os.getenv("JAMENDO_CLIENT_ID"),
-        "client_id": get_vault_secret("JAMENDO_CLIENT_ID"),
+        "client_id": os.getenv("JAMENDO_CLIENT_ID"),
         "format": "json",
         "search": query,
         "limit": 5
@@ -82,7 +70,6 @@ def search_jamendo(title, artist, orig_duration=None, orig_isrc=None):
         response = requests.get(url, params=params)
         response.raise_for_status()
         results = response.json().get("results", [])
-        # <--- ADD THIS LINE
         logging.info(f"Jamendo API raw response: {response.text}")
 
         logging.info(
@@ -153,7 +140,6 @@ async def find_songs(playlist):
         album_art = getattr(item.track, "albumArt", None)
         orig_duration = getattr(item.track, "duration", None)
         orig_isrc = getattr(item.track, "isrc", None)
-        # --- Extract Spotify URL robustly ---
         spotify_url = getattr(item.track, "external_url", None)
         # Search for the song in Jamendo with stricter checks
         founded_song = search_jamendo(

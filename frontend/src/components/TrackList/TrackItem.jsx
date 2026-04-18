@@ -5,23 +5,32 @@ import { FiCheck, FiExternalLink, FiLink } from 'react-icons/fi';
 const Row = styled.div`
   display: flex;
   align-items: center;
-  padding: 0.75rem;
+  padding: 0.55rem 0.85rem;
   border-radius: 10px;
-  background: #18181b;
-  margin-bottom: 0.75rem;
+  background: ${({ $checked }) => $checked ? 'rgba(29, 185, 84, 0.06)' : 'rgba(255, 255, 255, 0.02)'};
+  border: 1px solid ${({ $checked }) => $checked ? 'rgba(29, 185, 84, 0.22)' : 'rgba(255, 255, 255, 0.06)'};
+  margin-bottom: 0.5rem;
   gap: 1rem;
   position: relative;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: ${({ $checked }) => $checked ? 'rgba(29, 185, 84, 0.08)' : 'rgba(255, 255, 255, 0.04)'};
+    border-color: ${({ $checked }) => $checked ? 'rgba(29, 185, 84, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
+  }
 `;
 
 const AlbumArt = styled.div`
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  background: #222;
+  width: 40px;
+  height: 40px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  flex-shrink: 0;
 `;
 
 const Info = styled.div`
@@ -34,59 +43,70 @@ const Info = styled.div`
 const Title = styled.div`
   font-weight: 600;
   color: #fff;
-  font-size: 1.08rem;
+  font-size: 1rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: 'Manrope', sans-serif;
 `;
 
 const Artist = styled.div`
-  font-size: 0.98rem;
-  color: #b3b3b3;
+  font-size: 0.88rem;
+  color: #8b95a9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 2px;
+  font-family: 'Manrope', sans-serif;
 `;
 
-const CustomCheckbox = styled.div`
-  width: 22px;
-  height: 22px;
+const StatusBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  margin-top: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-family: 'Manrope', sans-serif;
+  background: ${({ $error }) => $error ? 'rgba(255, 82, 82, 0.1)' : 'rgba(29, 185, 84, 0.1)'};
+  color: ${({ $error }) => $error ? '#ff6b6b' : '#1db954'};
+  border: 1px solid ${({ $error }) => $error ? 'rgba(255, 82, 82, 0.18)' : 'rgba(29, 185, 84, 0.18)'};
+  width: fit-content;
+`;
+
+export const Checkbox = styled.div`
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
-  background: #111;
-  border: 2px solid #222;
+  background: ${({ $checked }) => $checked ? 'rgba(29, 185, 84, 0.1)' : 'rgba(255, 255, 255, 0.04)'};
+  border: 1.5px solid ${({ $checked }) => $checked ? '#1db954' : 'rgba(255, 255, 255, 0.15)'};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: border 0.15s;
-  margin-right: 12px;
-  ${props => props.checked && `
-    border: 2px solid #1db954;
-    background: #111;
-  `}
-`;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background 0.15s;
 
-const DownloadMsg = styled.div`
-  margin-top: 0.35rem;
-  font-size: 0.97rem;
-  color: ${({ error }) => error ? '#ff5252' : '#1db954'};
-  font-weight: 500;
-  word-break: break-word;
+  &:hover {
+    border-color: ${({ $checked }) => $checked ? '#1db954' : 'rgba(255, 255, 255, 0.35)'};
+  }
 `;
 
 const Links = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 16px;
-  margin-left: 18px;
-  margin-right: 4px;
-  min-width: 0;
+  gap: 14px;
+  margin-left: 8px;
+  margin-right: 2px;
+  flex-shrink: 0;
 `;
 
 const PreviewButton = styled.button`
-  background: #222;
-  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 50%;
   width: 32px;
   height: 32px;
@@ -95,26 +115,26 @@ const PreviewButton = styled.button`
   justify-content: center;
   color: #1db954;
   cursor: pointer;
-  &:hover { background: #333; }
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: rgba(29, 185, 84, 0.12);
+    border-color: rgba(29, 185, 84, 0.25);
+  }
 `;
 
-// Always show one concise reason for each track, regardless of downloadStatus
 function getTrackReason(track) {
   if (track.found_on_jamendo) {
-      return { msg: "Free to download", error: false };
+    return { msg: 'Free to download', error: false };
   }
-  else {
-    return { msg: "Not copyright free", error: true };
-  }
+  return { msg: 'Not copyright free', error: true };
 }
 
 export default function TrackItem({ track, checked, onCheck, downloadStatus, showSpotifyLink }) {
-  // For /find-tracks/ results: use 'song' and 'artists'
   const title = track.song || track.name || 'Unknown Title';
   const artist = Array.isArray(track.artists)
     ? track.artists.join(', ')
     : (track.artist || 'Unknown Artist');
-  // Prefer albumArt from Spotify, then Jamendo, then fallback
   const albumArt =
     track.albumArt ||
     (track.found_on_jamendo && track.found_on_jamendo.album_image) ||
@@ -122,7 +142,6 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
 
   const { msg: downloadMsg, error: isError } = getTrackReason(track);
 
-  // --- Add Spotify and Jamendo URLs ---
   const spotifyUrl = track.spotify_url || track.external_url || null;
   const jamendoUrl =
     track.jamendo_url ||
@@ -130,45 +149,40 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
       ? `https://www.jamendo.com/track/${track.found_on_jamendo.id}`
       : null);
 
-  // --- Audio preview logic ---
   const [playing, setPlaying] = React.useState(false);
   const audioRef = React.useRef(null);
-  const previewUrl = track.preview_url || null;
-
-  React.useEffect(() => {
-    if (!playing && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-  }, [playing]);
+  const previewUrl = track.preview_url;
 
   function handlePreviewClick(e) {
     e.stopPropagation();
     if (playing) {
       setPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
     } else {
       setPlaying(true);
-      if (audioRef.current) {
-        audioRef.current.play();
-      }
+      if (audioRef.current) audioRef.current.play();
     }
   }
 
   function handleAudioEnded() {
     setPlaying(false);
+    if (audioRef.current) audioRef.current.currentTime = 0;
   }
 
   return (
-    <Row>
-      <CustomCheckbox checked={checked} onClick={onCheck} tabIndex={0} role="checkbox" aria-checked={checked}>
-        {checked && <FiCheck color="#1db954" size={18} />}
-      </CustomCheckbox>
+    <Row $checked={checked} onClick={onCheck}>
+      <Checkbox $checked={checked} tabIndex={0} role="checkbox" aria-checked={checked}
+        onClick={e => { e.stopPropagation(); onCheck(); }}>
+        {checked && <FiCheck color="#1db954" size={14} />}
+      </Checkbox>
       <AlbumArt>
         {albumArt ? (
-          <img src={albumArt} alt="cover" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+          <img src={albumArt} alt="cover" style={{ width: 40, height: 40, borderRadius: 7, objectFit: 'cover' }} />
         ) : (
-          // Melody SVG icon
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#b3b3b3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
             <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
             <path d="M13 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
@@ -180,21 +194,19 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
       <Info>
         <Title>{title}</Title>
         <Artist>{artist}</Artist>
-        <DownloadMsg error={isError}>{downloadMsg}</DownloadMsg>
+        <StatusBadge $error={isError}>{downloadMsg}</StatusBadge>
       </Info>
-      <Links>
+      <Links onClick={e => e.stopPropagation()}>
         {previewUrl && (
           <>
-            <PreviewButton onClick={handlePreviewClick} title={playing ? "Pause preview" : "Play preview"}>
+            <PreviewButton onClick={handlePreviewClick} title={playing ? 'Pause preview' : 'Play preview'}>
               {playing ? (
-                // Pause icon
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <rect x="6" y="4" width="4" height="16" rx="1" />
                   <rect x="14" y="4" width="4" height="16" rx="1" />
                 </svg>
               ) : (
-                // Play icon
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <polygon points="5,3 19,12 5,21 5,3" />
                 </svg>
               )}
@@ -213,10 +225,12 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
             href={jamendoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#ff8800", display: 'flex', alignItems: 'center' }}
+            style={{ color: '#ff8800', display: 'flex', alignItems: 'center', opacity: 0.85, transition: 'opacity 0.15s' }}
             title="Open in Jamendo"
+            onMouseEnter={e => e.currentTarget.style.opacity = 1}
+            onMouseLeave={e => e.currentTarget.style.opacity = 0.85}
           >
-            <FiLink size={24} />
+            <FiLink size={20} />
           </a>
         )}
         {spotifyUrl && (
@@ -224,10 +238,12 @@ export default function TrackItem({ track, checked, onCheck, downloadStatus, sho
             href={spotifyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#1db954", display: 'flex', alignItems: 'center' }}
+            style={{ color: '#1db954', display: 'flex', alignItems: 'center', opacity: 0.85, transition: 'opacity 0.15s' }}
             title="Open in Spotify"
+            onMouseEnter={e => e.currentTarget.style.opacity = 1}
+            onMouseLeave={e => e.currentTarget.style.opacity = 0.85}
           >
-            <FiExternalLink size={24} />
+            <FiExternalLink size={20} />
           </a>
         )}
       </Links>

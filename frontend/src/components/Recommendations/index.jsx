@@ -2,7 +2,6 @@ import React from 'react';
 import styled from 'styled-components';
 import { FiCpu, FiExternalLink, FiLink } from 'react-icons/fi';
 
-// Use the same styled components as TrackList
 const Card = styled.div`
   background: transparent;
   padding: 0;
@@ -23,22 +22,29 @@ const List = styled.div`
 const Row = styled.div`
   display: flex;
   align-items: center;
-  padding: 0.75rem;
-  border-radius: 10px;
-  background: #18181b;
-  margin-bottom: 0.75rem;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   gap: 1rem;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 `;
 
 const AlbumArt = styled.img`
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 8px;
   object-fit: cover;
-  background: #222;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 `;
 
 const Info = styled.div`
@@ -51,18 +57,21 @@ const Info = styled.div`
 const TrackTitle = styled.div`
   font-weight: 600;
   color: #fff;
-  font-size: 1.08rem;
+  font-size: 1rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: 'Manrope', sans-serif;
 `;
 
 const TrackArtist = styled.div`
-  font-size: 0.98rem;
-  color: #b3b3b3;
+  font-size: 0.88rem;
+  color: #8b95a9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 2px;
+  font-family: 'Manrope', sans-serif;
 `;
 
 const Title = styled.h2`
@@ -70,8 +79,12 @@ const Title = styled.h2`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-size: 1.08rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #1db954;
   margin-bottom: 1.2rem;
 `;
 
@@ -79,19 +92,21 @@ const Description = styled.div`
   max-width: 600px;
   width: 100%;
   margin: 0 auto 1.5rem auto;
-  color: #d1d1d1;
-  font-size: 1.04rem;
+  color: #8b95a9;
+  font-size: 0.97rem;
   text-align: center;
+  font-family: 'Manrope', sans-serif;
+  line-height: 1.6;
 `;
 
 const Links = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 16px;
-  margin-left: 18px;
-  margin-right: 4px;
-  min-width: 0;
+  gap: 14px;
+  margin-left: 8px;
+  margin-right: 2px;
+  flex-shrink: 0;
 `;
 
 function parseTrack(str) {
@@ -99,28 +114,24 @@ function parseTrack(str) {
   return {
     name: name?.trim() || 'Unknown Title',
     artist: rest.join(' - ').trim() || '',
-    albumArt: 'https://placehold.co/48x48/222/fff?text=♪'
+    albumArt: 'https://placehold.co/48x48/0f1420/444?text=♪'
   };
 }
 
-// Helper: normalize string for comparison
 function norm(s) {
   return (s || '').trim().toLowerCase().replace(/[\s\-]+/g, ' ');
 }
 
-// Try to match suggestion to playlist track by name and artist (case-insensitive, fuzzy)
 function getAlbumArtForRecommendation(parsed, playlistTracks = []) {
   const normName = norm(parsed.name);
   const normArtist = norm(parsed.artist);
 
-  // Try to match both name and artist exactly
   let match = playlistTracks.find(t => {
     const tName = norm(t.song || t.name);
     const tArtists = Array.isArray(t.artists) ? t.artists.join(', ') : (t.artists || '');
     return tName === normName && norm(tArtists) === normArtist;
   });
 
-  // Try to match name and artist as substring (for fuzzy artist matches)
   if (!match) {
     match = playlistTracks.find(t => {
       const tName = norm(t.song || t.name);
@@ -129,28 +140,24 @@ function getAlbumArtForRecommendation(parsed, playlistTracks = []) {
     });
   }
 
-  // Try to match just name
   if (!match) {
     match = playlistTracks.find(t => norm(t.song || t.name) === normName);
   }
 
-  // Use albumArt from Spotify, then Jamendo, then fallback
   if (match) {
     return (
       match.albumArt ||
       (match.found_on_jamendo && match.found_on_jamendo.album_image) ||
-      'https://placehold.co/48x48/222/fff?text=♪'
+      'https://placehold.co/48x48/0f1420/444?text=♪'
     );
   }
-  return 'https://placehold.co/48x48/222/fff?text=♪';
+  return 'https://placehold.co/48x48/0f1420/444?text=♪';
 }
 
 export default function Recommendations({ list, personalityDescription, tracks = [] }) {
-  // tracks: original playlist tracks (array of {song, name, artists, albumArt, found_on_jamendo, ...})
-  const recs = (list || []).map((s, i) => {
+  const recs = (list || []).map((s) => {
     const parsed = parseTrack(s);
     const albumArt = getAlbumArtForRecommendation(parsed, tracks);
-    // Try to find Spotify/Jamendo URLs from original tracks
     let spotify_url = null, jamendo_url = null;
     const match = tracks.find(t => {
       const tName = norm(t.song || t.name);
@@ -165,19 +172,13 @@ export default function Recommendations({ list, personalityDescription, tracks =
           ? `https://www.jamendo.com/track/${match.found_on_jamendo.id}`
           : null);
     }
-    return {
-      label: s,
-      ...parsed,
-      albumArt,
-      spotify_url,
-      jamendo_url,
-    };
+    return { label: s, ...parsed, albumArt, spotify_url, jamendo_url };
   });
 
   return (
     <Card>
       <div style={{ position: 'relative' }}>
-        <Title><FiCpu color="#1db954" /> AI Suggestions</Title>
+        <Title><FiCpu size={14} /> AI Suggestions</Title>
         {personalityDescription && (
           <Description>{personalityDescription}</Description>
         )}
@@ -195,10 +196,12 @@ export default function Recommendations({ list, personalityDescription, tracks =
                     href={t.jamendo_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "#ff8800", display: 'flex', alignItems: 'center' }}
+                    style={{ color: '#ff8800', display: 'flex', alignItems: 'center', opacity: 0.85, transition: 'opacity 0.15s' }}
                     title="Open in Jamendo"
+                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                    onMouseLeave={e => e.currentTarget.style.opacity = 0.85}
                   >
-                    <FiLink size={24} />
+                    <FiLink size={20} />
                   </a>
                 )}
                 {t.spotify_url && (
@@ -206,10 +209,12 @@ export default function Recommendations({ list, personalityDescription, tracks =
                     href={t.spotify_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "#1db954", display: 'flex', alignItems: 'center' }}
+                    style={{ color: '#1db954', display: 'flex', alignItems: 'center', opacity: 0.85, transition: 'opacity 0.15s' }}
                     title="Open in Spotify"
+                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                    onMouseLeave={e => e.currentTarget.style.opacity = 0.85}
                   >
-                    <FiExternalLink size={24} />
+                    <FiExternalLink size={20} />
                   </a>
                 )}
               </Links>

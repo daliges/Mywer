@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: mywer-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://mywer-api-gateway.onrender.com  # update after first deploy
+
+  - type: web
+    name: mywer-api-gateway
+    runtime: docker
+    dockerfilePath: api_gateway/Dockerfile
+    envVars:
+      - key: MATCHING_RECOMMENDATION_URL
+        value: http://mywer-matching:8001
+      - key: DOWNLOAD_URL
+        value: http://mywer-download:8002
+      - key: SPOTIFY_URL
+        value: http://mywer-spotify:8003
+      - key: CORS_ORIGINS
+        value: https://mywer-frontend.onrender.com  # update after first deploy
+
+  - type: pserv
+    name: mywer-matching
+    runtime: docker
+    dockerfilePath: matching_recommendation/Dockerfile
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JAMENDO_CLIENT_ID
+        sync: false
+      - key: JAMENDO_API_URL
+        value: https://api.jamendo.com/v3.0
+
+  - type: pserv
+    name: mywer-download
+    runtime: docker
+    dockerfilePath: download/Dockerfile
+
+  - type: pserv
+    name: mywer-spotify
+    runtime: docker
+    dockerfilePath: spotify/Dockerfile
+    envVars:
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false

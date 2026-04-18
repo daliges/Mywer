@@ -23,9 +23,6 @@ services:
       - "8001:8001"
     env_file:
       - .env
-    environment:
-      - VAULT_ADDR=${VAULT_ADDR}
-      - VAULT_TOKEN=${VAULT_TOKEN}
 
   download:
     build:
@@ -42,9 +39,6 @@ services:
       - "8003:8003"
     env_file:
       - .env
-    environment:
-      - VAULT_ADDR=${VAULT_ADDR}
-      - VAULT_TOKEN=${VAULT_TOKEN}
 
   frontend:
     build:

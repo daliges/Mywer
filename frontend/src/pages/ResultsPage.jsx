@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FiChevronLeft, FiCopy, FiCheckCircle } from 'react-icons/fi';
 import TrackList from '../components/TrackList';
-import Recommendations from '../components/Recommendations';
 import Personality from '../components/Personality';
 import DownloadButton, { Loader } from '../components/DownloadButton';
 import { findTracks, getRecommendations, downloadTracks } from '../services/api';
@@ -11,49 +10,239 @@ import axios from 'axios';
 
 const Tabs = styled.div`
   display: flex;
-  gap: 2rem;
-  padding: 1.5rem 0 1.5rem 0;
-  justify-content: center;
+  gap: 0;
+  padding: 0 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: #080c14;
 `;
+
 const Tab = styled.button`
   background: none;
   border: none;
-  color: ${({ active, theme }) => active ? theme.colors.primary : theme.colors.subtext};
-  font-size: 1.25rem;
-  font-weight: 600;
+  border-bottom: 2px solid ${({ active }) => active ? '#1DB954' : 'transparent'};
+  color: ${({ active }) => active ? '#fff' : '#8b95a9'};
+  font-size: 0.95rem;
+  font-weight: ${({ active }) => active ? '600' : '400'};
+  font-family: 'Manrope', sans-serif;
   cursor: pointer;
-  padding: 0.5rem 1.5rem;
-  border-radius: 999px;
-  transition: background 0.2s;
-  background: ${({ active }) => active ? '#18181b' : 'transparent'};
+  padding: 1.1rem 1.25rem;
+  margin-bottom: -1px;
+  transition: color 0.18s, border-color 0.18s;
+  letter-spacing: 0.01em;
+
+  &:hover {
+    color: #fff;
+  }
 `;
+
 const Content = styled.div`
-   padding: 2rem;
-   flex: 1;
-   overflow-y: auto;
-   background: ${({ theme }) => theme.colors.background};
-   position: relative;
-   transition: opacity 0.35s cubic-bezier(.4,0,.2,1);
-   opacity: ${({ $fade }) => ($fade ? 1 : 0)};
- `;
+  padding: 2.5rem 2rem;
+  flex: 1;
+  overflow-y: auto;
+  background: #080c14;
+  position: relative;
+  transition: opacity 0.3s ease;
+  opacity: ${({ $fade }) => ($fade ? 1 : 0)};
+`;
+
 const TopBar = styled.div`
-  background: #18181b;
-  padding: 1rem 2rem;
+  background: #080c14;
+  padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
-  box-shadow: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 `;
+
 const BackBtn = styled.button`
   background: none;
   border: none;
-  color: #1db954;
-  font-size: 1.1rem;
+  color: #8b95a9;
+  font-size: 0.92rem;
+  font-family: 'Manrope', sans-serif;
   display: flex;
   align-items: center;
   cursor: pointer;
-  font-weight: 600;
-  gap: 0.5rem;
+  font-weight: 500;
+  gap: 0.3rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+  }
 `;
+
+const AiSectionLabel = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #1db954;
+  margin-bottom: 1.2rem;
+`;
+
+const ShowMoreBtn = styled.button`
+  background: #1DB954;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 2rem;
+  font-weight: 700;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(29, 185, 84, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+
+  &:hover {
+    background: #1aa349;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(29, 185, 84, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const LoadingPill = styled.div`
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #8b95a9;
+  border-radius: 999px;
+  padding: 0.75rem 2rem;
+  font-size: 0.92rem;
+  font-family: 'Manrope', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+`;
+
+const CopyBtn = styled.button`
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 120;
+  background: ${({ $success }) => $success ? '#1aa349' : '#1db954'};
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.6rem;
+  font-weight: 700;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.97rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: ${({ $success }) => $success
+    ? '0 0 0 5px rgba(29,185,84,0.2), 0 4px 24px rgba(29, 185, 84, 0.4)'
+    : '0 4px 24px rgba(29, 185, 84, 0.35)'};
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 32px rgba(29, 185, 84, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+async function performDownload(trackList, selectedIdxs, setLoadingFn, setError) {
+  setLoadingFn(true);
+  setError && setError(null);
+  let statusMap = {};
+  let errors = [];
+  try {
+    const payload = selectedIdxs.map(idx => {
+      const t = trackList[idx];
+      const jamendo = t.found_on_jamendo || {};
+      return {
+        name: t.song || t.name || 'Unknown Title',
+        artists: t.artists || [],
+        audio: jamendo.audio || jamendo.audio_url || null,
+        audiodownload: jamendo.audiodownload || jamendo.audiodownload_url || null
+      };
+    });
+    const res = await downloadTracks(payload);
+    const contentType = res.headers['content-type'];
+    if (contentType && contentType.startsWith('application/zip')) {
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url; a.download = 'tracks.zip'; a.click();
+      window.URL.revokeObjectURL(url);
+
+      let notFoundHeader = res.headers['x-not-found'];
+      if (notFoundHeader) {
+        try {
+          if (
+            (notFoundHeader.startsWith('"') && notFoundHeader.endsWith('"')) ||
+            (notFoundHeader.startsWith("'") && notFoundHeader.endsWith("'"))
+          ) {
+            notFoundHeader = notFoundHeader.slice(1, -1);
+          }
+          notFoundHeader = notFoundHeader.replace(/\\"/g, '"');
+          const notFound = JSON.parse(notFoundHeader);
+          if (Array.isArray(notFound) && notFound.length > 0) errors = notFound;
+        } catch (e) {}
+      }
+      selectedIdxs.forEach((idx) => {
+        const t = trackList[idx];
+        const name = t.song || t.name || 'Unknown Title';
+        const artists = t.artists || [];
+        const trackLabel = `${name} - ${artists.join(', ')}`;
+        const errorObj = errors.find(e => e.track === trackLabel);
+        if (errorObj) {
+          statusMap[idx] = { status: 'failed', message: errorObj.reason || 'Download failed' };
+        } else {
+          statusMap[idx] = { status: 'success', message: 'Downloaded successfully' };
+        }
+      });
+    } else if (contentType && contentType.includes('application/json')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const json = JSON.parse(reader.result);
+          if (json.not_found && Array.isArray(json.not_found) && json.not_found.length > 0) {
+            setError && setError(json.not_found);
+          } else if (json.detail) {
+            setError && setError([{ track: json.detail, reason: '' }]);
+          } else {
+            setError && setError([{ track: 'Unknown', reason: 'Unknown error' }]);
+          }
+        } catch {
+          setError && setError([{ track: 'Unknown', reason: 'Unknown error' }]);
+        }
+      };
+      reader.readAsText(res.data);
+      selectedIdxs.forEach((idx) => {
+        statusMap[idx] = { status: 'failed', message: 'Download failed' };
+      });
+    }
+  } catch (err) {
+    selectedIdxs.forEach((idx) => {
+      statusMap[idx] = { status: 'failed', message: 'Download failed' };
+    });
+    errors = [{ track: 'Unknown', reason: 'Download failed' }];
+  } finally {
+    setLoadingFn(false);
+  }
+  return { errors, statusMap };
+}
 
 export default function ResultsPage() {
   const { state } = useLocation();
@@ -61,45 +250,40 @@ export default function ResultsPage() {
   const playlist = state.playlist;
 
   const [tracks, setTracks]     = useState([]);
-  const [recs, setRecs]         = useState(null);
   const [profile, setProfile]   = useState(null);
   const [selected, setSelected] = useState([]);
-  // Only two tabs: 'free' and 'profile'
   const [tab, setTab]           = useState('free');
   const [loading, setLoading]   = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [fade, setFade] = useState(true);
-  const [downloadStatus, setDownloadStatus] = useState({}); // { [trackIdx]: { status, message } }
+  const [downloadStatus, setDownloadStatus] = useState({});
 
-  // New states for AI tracks
-  const [aiTracks, setAiTracks] = useState([]); // Jamendo matches for AI suggestions
+  const [aiTracks, setAiTracks] = useState([]);
   const [aiSelected, setAiSelected] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDownloadStatus, setAiDownloadStatus] = useState({});
 
-  const [aiRecCount, setAiRecCount] = useState(5);
-  const [aiTotalRequested, setAiTotalRequested] = useState(5); // tracks requested so far
-  const [aiAllRecs, setAiAllRecs] = useState([]); // all recs accumulated
-  const [aiSpotifyData, setAiSpotifyData] = useState([]); // [{preview_url, spotify_url}, ...]
+  const [aiTotalRequested, setAiTotalRequested] = useState(5);
+  const [aiAllRecs, setAiAllRecs] = useState([]);
+  const [aiSpotifyData, setAiSpotifyData] = useState([]);
 
-  // --- Add state for AI copy selection (reuse aiSelected for both download/copy) ---
-  // aiSelected, setAiSelected already exist
-
-  // --- Add state for copy animation ---
   const [copyAnim, setCopyAnim] = useState(false);
 
-  // Fetch initial recommendations (or when playlist changes)
+  const aiMatchesFetchedLen = useRef(0);
+  const aiSpotifyFetchedLen = useRef(0);
+
   useEffect(() => {
     setInitialLoading(true);
-    setRecs(null);
     setProfile(null);
     setAiAllRecs([]);
-    setAiRecCount(5);
     setAiTotalRequested(5);
+    aiMatchesFetchedLen.current = 0;
+    aiSpotifyFetchedLen.current = 0;
+    setAiTracks([]);
+    setAiSpotifyData([]);
     Promise.all([
       findTracks(playlist).then(r => setTracks(r.data)),
       getRecommendations({ ...playlist, count: 5 }).then(r => {
-        setRecs(r.data.suggestions);
         setProfile(r.data.character);
         setAiAllRecs(r.data.suggestions || []);
       })
@@ -107,289 +291,37 @@ export default function ResultsPage() {
     // eslint-disable-next-line
   }, [playlist]);
 
-  // When recs change (from backend), update aiAllRecs if it's the initial load
-  useEffect(() => {
-    if (aiRecCount === 5 && recs && recs.length > 0) {
-      setAiAllRecs(recs);
-    }
-    // eslint-disable-next-line
-  }, [recs]);
-
-  // Animate fade-out/fade-in on tab change
   useEffect(() => {
     setFade(false);
-    const timeout = setTimeout(() => setFade(true), 30); // short delay for fade-out then fade-in
+    const timeout = setTimeout(() => setFade(true), 30);
     return () => clearTimeout(timeout);
   }, [tab]);
 
-  const handleDownload = async (setError) => {
-    setLoading(true);
-    setError && setError(null);
-    let statusMap = {};
-    let errors = [];
-    try {
-      const payload = selected.map(idx => {
-        const t = tracks[idx];
-        const jamendo = t.found_on_jamendo || {};
-        return {
-          name: t.song || t.name || 'Unknown Title',
-          artists: t.artists || [],
-          audio: jamendo.audio || jamendo.audio_url || null,
-          audiodownload: jamendo.audiodownload || jamendo.audiodownload_url || null
-        };
-      });
-      const res = await downloadTracks(payload);
-      const contentType = res.headers['content-type'];
-      if (contentType && contentType.startsWith('application/zip')) {
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const a = document.createElement('a');
-        a.href = url; a.download = 'tracks.zip'; a.click();
-        window.URL.revokeObjectURL(url);
+  const handleDownload = (setError) =>
+    performDownload(tracks, selected, setLoading, setError);
 
-        // --- Robustly parse not-found header ---
-        let notFoundHeader = res.headers['x-not-found'];
-        if (notFoundHeader) {
-          try {
-            if (
-              (notFoundHeader.startsWith('"') && notFoundHeader.endsWith('"')) ||
-              (notFoundHeader.startsWith("'") && notFoundHeader.endsWith("'"))
-            ) {
-              notFoundHeader = notFoundHeader.slice(1, -1);
-            }
-            // Unescape any \" to "
-            notFoundHeader = notFoundHeader.replace(/\\"/g, '"');
-            const notFound = JSON.parse(notFoundHeader);
-            if (Array.isArray(notFound) && notFound.length > 0) {
-              errors = notFound;
-            }
-          } catch (e) {}
-        }
-        // Mark all selected as success except those in errors
-        selected.forEach((idx, i) => {
-          const t = tracks[idx];
-          const name = t.song || t.name || 'Unknown Title';
-          const artists = t.artists || [];
-          const trackLabel = `${name} - ${artists.join(', ')}`;
-          const errorObj = errors.find(e => e.track === trackLabel);
-          if (errorObj) {
-            statusMap[idx] = { status: 'failed', message: errorObj.reason || 'Download failed' };
-          } else {
-            statusMap[idx] = { status: 'success', message: 'Downloaded successfully' };
-          }
-        });
-      } else if (contentType && contentType.includes('application/json')) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const json = JSON.parse(reader.result);
-            if (json.not_found && Array.isArray(json.not_found) && json.not_found.length > 0) {
-              setError && setError(json.not_found);
-            } else if (json.detail) {
-              setError && setError([{ track: json.detail, reason: "" }]);
-            } else {
-              setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
-            }
-          } catch {
-            setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
-          }
-        };
-        reader.readAsText(res.data);
-        // Mark all selected as failed
-        selected.forEach((idx) => {
-          statusMap[idx] = { status: 'failed', message: 'Download failed' };
-        });
-      }
-    } catch (err) {
-      // Mark all selected as failed
-      selected.forEach((idx) => {
-        statusMap[idx] = { status: 'failed', message: 'Download failed' };
-      });
-      errors = [{ track: "Unknown", reason: "Download failed" }];
-    } finally {
-      setLoading(false);
-    }
-    return { errors, statusMap };
-  };
-
-  // Fetch Jamendo matches for AI suggestions
-  useEffect(() => {
-    async function fetchAiMatches() {
-      if (!aiAllRecs || !Array.isArray(aiAllRecs)) return;
-      setAiLoading(true);
-      const requests = aiAllRecs.map(s => {
-        const [name, ...rest] = s.split(' - ');
-        const artist = rest.join(' - ').trim();
-        return findTracks({
-          id: "https://fake.spotify.com/playlist/ai",
-          tracks: {
-            items: [{
-              track: {
-                name: name?.trim() || '',
-                album: { name: '' },
-                artists: [{ name: artist || '' }],
-                albumArt: null,
-                duration: null,
-                isrc: null
-              }
-            }]
-          }
-        }).then(r => r.data[0]);
-      });
-      const results = await Promise.all(requests);
-      setAiTracks(results);
-      // Do not reset aiSelected here
-      setAiLoading(false);
-    }
-    if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
-      fetchAiMatches();
-    }
-    // eslint-disable-next-line
-  }, [tab, aiAllRecs]);
-
-  // Reset aiSelected only when aiTracks changes (e.g. after loading new tracks)
-  useEffect(() => {
-    setAiSelected([]);
-  }, [aiTracks]);
-
-  // Download handler for AI tab
-  const handleAiDownload = async (setError) => {
-    setAiLoading(true);
-    setError && setError(null);
-    let statusMap = {};
-    let errors = [];
-    try {
-      const payload = aiSelected.map(idx => {
-        const t = aiTracks[idx];
-        const jamendo = t.found_on_jamendo || {};
-        return {
-          name: t.song || t.name || 'Unknown Title',
-          artists: t.artists || [],
-          audio: jamendo.audio || jamendo.audio_url || null,
-          audiodownload: jamendo.audiodownload || jamendo.audiodownload_url || null
-        };
-      });
-      const res = await downloadTracks(payload);
-      const contentType = res.headers['content-type'];
-      if (contentType && contentType.startsWith('application/zip')) {
-        const url = window.URL.createObjectURL(new Blob([res.data]));
-        const a = document.createElement('a');
-        a.href = url; a.download = 'tracks.zip'; a.click();
-        window.URL.revokeObjectURL(url);
-
-        let notFoundHeader = res.headers['x-not-found'];
-        if (notFoundHeader) {
-          try {
-            if (
-              (notFoundHeader.startsWith('"') && notFoundHeader.endsWith('"')) ||
-              (notFoundHeader.startsWith("'") && notFoundHeader.endsWith("'"))
-            ) {
-              notFoundHeader = notFoundHeader.slice(1, -1);
-            }
-            notFoundHeader = notFoundHeader.replace(/\\"/g, '"');
-            const notFound = JSON.parse(notFoundHeader);
-            if (Array.isArray(notFound) && notFound.length > 0) {
-              errors = notFound;
-            }
-          } catch (e) {}
-        }
-        aiSelected.forEach((idx, i) => {
-          const t = aiTracks[idx];
-          const name = t.song || t.name || 'Unknown Title';
-          const artists = t.artists || [];
-          const trackLabel = `${name} - ${artists.join(', ')}`;
-          const errorObj = errors.find(e => e.track === trackLabel);
-          if (errorObj) {
-            statusMap[idx] = { status: 'failed', message: errorObj.reason || 'Download failed' };
-          } else {
-            statusMap[idx] = { status: 'success', message: 'Downloaded successfully' };
-          }
-        });
-      } else if (contentType && contentType.includes('application/json')) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const json = JSON.parse(reader.result);
-            if (json.not_found && Array.isArray(json.not_found) && json.not_found.length > 0) {
-              setError && setError(json.not_found);
-            } else if (json.detail) {
-              setError && setError([{ track: json.detail, reason: "" }]);
-            } else {
-              setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
-            }
-          } catch {
-            setError && setError([{ track: "Unknown", reason: "Unknown error" }]);
-          }
-        };
-        reader.readAsText(res.data);
-        aiSelected.forEach((idx) => {
-          statusMap[idx] = { status: 'failed', message: 'Download failed' };
-        });
-      }
-    } catch (err) {
-      aiSelected.forEach((idx) => {
-        statusMap[idx] = { status: 'failed', message: 'Download failed' };
-      });
-      errors = [{ track: "Unknown", reason: "Download failed" }];
-    } finally {
-      setAiLoading(false);
-    }
-    return { errors, statusMap };
-  };
-
-  // Helper: Search Spotify for a track and artist, return {spotify_url, preview_url}
   async function searchSpotifyTrack(name, artist) {
-    // You need a backend endpoint to proxy Spotify API search (to avoid exposing your token)
-    // Here we assume you have /get-spotify-track/?name=...&artist=...
     try {
       const resp = await axios.get('http://localhost:8000/get-spotify-track/', {
         params: { name, artist }
       });
-      return resp.data; // { spotify_url, preview_url }
+      return resp.data;
     } catch {
       return { spotify_url: null, preview_url: null };
     }
   }
 
-  // Fetch Spotify links and previews for AI recommendations
   useEffect(() => {
-    async function fetchSpotifyData() {
+    async function fetchAiMatches() {
       if (!aiAllRecs || !Array.isArray(aiAllRecs)) return;
-      const requests = aiAllRecs.map(async s => {
-        const [name, ...rest] = s.split(' - ');
-        const artist = rest.join(' - ').trim();
-        return await searchSpotifyTrack(name?.trim() || '', artist || '');
-      });
-      const results = await Promise.all(requests);
-      setAiSpotifyData(results);
-    }
-    if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
-      fetchSpotifyData();
-    }
-    // eslint-disable-next-line
-  }, [tab, aiAllRecs]);
-
-  // Helper to get Spotify/preview for AI track
-  function getAiSpotifyData(idx) {
-    return aiSpotifyData[idx] || {};
-  }
-
-  // Fetch more recommendations and append to aiAllRecs
-  const handleShowMoreAiRecs = async () => {
-    const nextCount = Math.min(aiTotalRequested + 10, 35);
-    setAiLoading(true);
-    try {
-      const r = await getRecommendations({ ...playlist, count: nextCount });
-      const newRecs = r.data.suggestions || [];
-      // Only add new tracks (avoid duplicates)
-      const prevSet = new Set(aiAllRecs);
-      const uniqueNewRecs = newRecs.filter(x => !prevSet.has(x));
-      setAiAllRecs(prev => [...prev, ...uniqueNewRecs]);
-      // Fetch Jamendo matches for only the new recs
-      const requests = uniqueNewRecs.map(s => {
+      const newRecs = aiAllRecs.slice(aiMatchesFetchedLen.current);
+      if (newRecs.length === 0) return;
+      setAiLoading(true);
+      const requests = newRecs.map(s => {
         const [name, ...rest] = s.split(' - ');
         const artist = rest.join(' - ').trim();
         return findTracks({
-          id: "https://fake.spotify.com/playlist/ai",
+          id: 'https://fake.spotify.com/playlist/ai',
           tracks: {
             items: [{
               track: {
@@ -406,7 +338,49 @@ export default function ResultsPage() {
       });
       const results = await Promise.all(requests);
       setAiTracks(prev => [...prev, ...results]);
-    } finally {
+      aiMatchesFetchedLen.current = aiAllRecs.length;
+      setAiLoading(false);
+    }
+    if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
+      fetchAiMatches();
+    }
+    // eslint-disable-next-line
+  }, [tab, aiAllRecs]);
+
+  useEffect(() => {
+    setAiSelected([]);
+  }, [aiTracks]);
+
+  useEffect(() => {
+    async function fetchSpotifyData() {
+      if (!aiAllRecs || !Array.isArray(aiAllRecs)) return;
+      const newRecs = aiAllRecs.slice(aiSpotifyFetchedLen.current);
+      if (newRecs.length === 0) return;
+      const requests = newRecs.map(s => {
+        const [name, ...rest] = s.split(' - ');
+        const artist = rest.join(' - ').trim();
+        return searchSpotifyTrack(name?.trim() || '', artist || '');
+      });
+      const results = await Promise.all(requests);
+      setAiSpotifyData(prev => [...prev, ...results]);
+      aiSpotifyFetchedLen.current = aiAllRecs.length;
+    }
+    if (tab === 'profile' && aiAllRecs && aiAllRecs.length > 0) {
+      fetchSpotifyData();
+    }
+    // eslint-disable-next-line
+  }, [tab, aiAllRecs]);
+
+  const handleShowMoreAiRecs = async () => {
+    const nextCount = Math.min(aiTotalRequested + 10, 35);
+    try {
+      const r = await getRecommendations({ ...playlist, count: nextCount });
+      const newRecs = r.data.suggestions || [];
+      const prevSet = new Set(aiAllRecs);
+      const uniqueNewRecs = newRecs.filter(x => !prevSet.has(x));
+      setAiAllRecs(prev => [...prev, ...uniqueNewRecs]);
+      setAiTotalRequested(nextCount);
+    } catch {
       setAiLoading(false);
     }
   };
@@ -418,11 +392,8 @@ export default function ResultsPage() {
     return null;
   }
 
-  // --- Handler for Copy to Clipboard ---
   const handleCopyAiTracks = () => {
-    const lines = aiSelected
-      .map(idx => aiAllRecs[idx])
-      .filter(Boolean);
+    const lines = aiSelected.map(idx => aiAllRecs[idx]).filter(Boolean);
     if (lines.length > 0) {
       navigator.clipboard.writeText(lines.join('\n'));
       setCopyAnim(true);
@@ -430,30 +401,20 @@ export default function ResultsPage() {
     }
   };
 
-  // Clear selected when switching to 'profile' tab
   useEffect(() => {
-    if (tab === 'profile' && selected.length > 0) {
-      setSelected([]);
-    }
-  }, [tab]); // Only runs when tab changes
-
-  // Clear selected when leaving 'free' tab
-  useEffect(() => {
-    if (tab !== 'free' && selected.length > 0) {
-      setSelected([]);
-    }
-  }, [tab]); // Only runs when tab changes
+    if (tab !== 'free' && selected.length > 0) setSelected([]);
+  }, [tab]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#080c14' }}>
       <TopBar>
         <BackBtn onClick={() => navigate('/')}>
-          <FiChevronLeft size={22} /> Back to homepage
+          <FiChevronLeft size={18} /> Back
         </BackBtn>
       </TopBar>
       <Tabs>
-        <Tab active={tab==='free'} onClick={()=>setTab('free')}>Free Matches</Tab>
-        <Tab active={tab==='profile'} onClick={()=>setTab('profile')}>Personality</Tab>
+        <Tab active={tab === 'free'} onClick={() => setTab('free')}>Free Matches</Tab>
+        <Tab active={tab === 'profile'} onClick={() => setTab('profile')}>Personality</Tab>
       </Tabs>
       <Content $fade={fade}>
         {tab === 'free' && (
@@ -473,13 +434,12 @@ export default function ResultsPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(0,0,0,0.45)',
+                background: 'rgba(8,12,20,0.6)',
                 zIndex: 30
               }}>
                 <Loader />
               </div>
             )}
-            {/* Only show DownloadButton if not loading and tracks are loaded, and only in free tab */}
             {selected.length > 0 && !initialLoading && (
               <DownloadButton
                 selected={selected.map(idx => tracks[idx])}
@@ -495,29 +455,18 @@ export default function ResultsPage() {
             <div style={{ marginBottom: 24 }}>
               <Personality text={profile} />
             </div>
-            {/* Title above AI suggestions list */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              fontSize: '1.08rem',
-              fontWeight: 700,
-              marginBottom: '1.2rem'
-            }}>
-              {/* AI/robot icon in green */}
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1db954" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+            <AiSectionLabel>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="8" width="18" height="8" rx="4" />
                 <path d="M12 8V4M8 4h8" />
                 <circle cx="8.5" cy="12" r="1" />
                 <circle cx="15.5" cy="12" r="1" />
               </svg>
               AI suggestions
-            </div>
-            {/* Use TrackList for AI suggestions, same as Free Matches */}
+            </AiSectionLabel>
             <TrackList
               tracks={aiTracks.map((t, i) => {
-                const { spotify_url, preview_url } = getAiSpotifyData(i);
+                const { spotify_url, preview_url } = aiSpotifyData[i] || {};
                 return {
                   ...t,
                   albumArt:
@@ -532,89 +481,39 @@ export default function ResultsPage() {
               selected={aiSelected}
               setSelected={setAiSelected}
               loading={initialLoading || aiLoading}
-              // Remove Loader prop for personality tab
               downloadStatus={aiDownloadStatus}
               showSpotifyLink={true}
             />
-            {/* Restore "Show More" button for more recommendations */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24, minHeight: 48 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 28, minHeight: 48 }}>
               {!aiLoading && aiAllRecs.length < 35 ? (
-                <button
-                  onClick={handleShowMoreAiRecs}
-                  disabled={aiLoading}
-                  style={{
-                    background: '#1db954',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 999,
-                    padding: '0.7rem 2.2rem',
-                    fontWeight: 700,
-                    fontSize: '1.08rem',
-                    cursor: aiLoading ? 'not-allowed' : 'pointer',
-                    opacity: aiLoading ? 0.7 : 1,
-                    boxShadow: '0 2px 8px 0 rgba(30,185,84,0.10)'
-                  }}
-                >
+                <ShowMoreBtn onClick={handleShowMoreAiRecs} disabled={aiLoading}>
                   Show More
-                </button>
+                </ShowMoreBtn>
               ) : aiLoading ? (
-                <div style={{
-                  background: '#18181b',
-                  color: '#b3b3b3',
-                  borderRadius: 999,
-                  padding: '0.7rem 2.2rem',
-                  fontWeight: 500,
-                  fontSize: '1.08rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: 48
-                }}>
-                  Loading more recommendations...
-                </div>
+                <LoadingPill>Loading more recommendations...</LoadingPill>
               ) : null}
             </div>
           </div>
         )}
       </Content>
-      {/* --- Persistent Copy button for AI tab, only show if at least one selected --- */}
       {tab === 'profile' && aiSelected.length > 0 && (
-        <button
+        <CopyBtn
           onClick={handleCopyAiTracks}
           disabled={aiSelected.length === 0}
-          style={{
-            position: 'fixed',
-            bottom: 32,
-            right: 32,
-            zIndex: 120,
-            background: copyAnim ? '#1db954' : '#1db954',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 999,
-            padding: '0.8rem 2.1rem',
-            fontWeight: 700,
-            fontSize: '1.13rem',
-            cursor: aiSelected.length === 0 ? 'not-allowed' : 'pointer',
-            opacity: aiSelected.length === 0 ? 0.7 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            transition: 'background 0.2s, box-shadow 0.2s, color 0.2s',
-            boxShadow: copyAnim ? '0 0 0 6px #1db95444' : '0 2px 16px 0 rgba(30,185,84,0.10)'
-          }}
+          $success={copyAnim}
           title="Copy selected tracks to clipboard"
         >
           {copyAnim ? (
             <>
-              <FiCheckCircle style={{ marginRight: 4, color: '#fff', transition: 'color 0.2s' }} />
+              <FiCheckCircle size={16} />
               Copied!
             </>
           ) : (
             <>
-              <FiCopy style={{ marginRight: 4 }} /> Copy
+              <FiCopy size={16} /> Copy
             </>
           )}
-        </button>
+        </CopyBtn>
       )}
     </div>
   );

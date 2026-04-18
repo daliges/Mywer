@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import TrackItem from './TrackItem';
+import TrackItem, { Checkbox } from './TrackItem';
 import { FiCheck } from 'react-icons/fi';
 
 const Card = styled.div`
@@ -8,19 +8,18 @@ const Card = styled.div`
   padding: 0;
   border-radius: 0;
   max-width: 800px;
-  margin: 2rem auto 0 auto;
+  margin: 1.5rem auto 0 auto;
   position: relative;
 `;
 
 const List = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
   position: relative;
   ${({ $loading }) => $loading && `
     pointer-events: none;
-    filter: blur(1.5px) brightness(0.7);
-    opacity: 0.7;
+    filter: blur(1.5px) brightness(0.6);
+    opacity: 0.6;
     transition: filter 0.2s, opacity 0.2s;
   `}
 `;
@@ -32,36 +31,32 @@ const Overlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 20;
-  background: rgba(0,0,0,0.45);
+  background: rgba(8, 12, 20, 0.55);
+  border-radius: 12px;
 `;
 
 const SelectAllRow = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
-  gap: 0.5rem;
-  color: #fff;
-  font-size: 1.08rem;
-  position: relative;
-  left: 11.6px; /* Visually aligns with checkboxes in TrackItem (tweak as needed, e.g. 68-74px) */
+  gap: 0.6rem;
+  cursor: pointer;
+  padding: 0.55rem 0.85rem;
+  width: fit-content;
+
+  &:hover span {
+    color: #fff;
+  }
 `;
 
-const GreyCheckbox = styled.div`
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: #232323;
-  border: 2px solid #444;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  margin-right: 8px;
-  ${props => props.checked && `
-    border: 2px solid #888;
-    background: #232323;
-  `}
+const SelectAllLabel = styled.span`
+  color: #8b95a9;
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: 'Manrope', sans-serif;
+  transition: color 0.15s;
+  user-select: none;
 `;
+
 
 export default function TrackList({ tracks, selected, setSelected, loading = false, Loader, downloadStatus = {}, showSpotifyLink = false }) {
   const allChecked = tracks.length > 0 && selected.length === tracks.length;
@@ -77,13 +72,13 @@ export default function TrackList({ tracks, selected, setSelected, loading = fal
   return (
     <Card>
       <div style={{ position: 'relative' }}>
-        <SelectAllRow>
-          <GreyCheckbox checked={allChecked} onClick={toggleAll} tabIndex={0} role="checkbox" aria-checked={allChecked}>
-            {allChecked && <FiCheck color="#b3b3b3" size={18} />}
-          </GreyCheckbox>
-          Select all
-        </SelectAllRow>
         <List $loading={loading}>
+          <SelectAllRow onClick={toggleAll} tabIndex={0} role="checkbox" aria-checked={allChecked}>
+            <Checkbox $checked={allChecked}>
+              {allChecked && <FiCheck color="#1db954" size={13} />}
+            </Checkbox>
+            <SelectAllLabel>Select all</SelectAllLabel>
+          </SelectAllRow>
           {tracks.map((track, idx) => (
             <TrackItem
               key={track.id || `${track.name}-${idx}` || idx}
@@ -95,6 +90,7 @@ export default function TrackList({ tracks, selected, setSelected, loading = fal
             />
           ))}
         </List>
+
         {loading && Loader && (
           <Overlay>
             <Loader />
